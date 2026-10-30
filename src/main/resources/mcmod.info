@@ -2,7 +2,7 @@
 {
   "modid": "${modid}",
   "name": "${modname}",
-  "description": "MPP DevTemplate",
+  "description": "Integrated Scripting Callback",
   "version": "${version}",
   "mcversion": "${mcversion}",
   "url": "",

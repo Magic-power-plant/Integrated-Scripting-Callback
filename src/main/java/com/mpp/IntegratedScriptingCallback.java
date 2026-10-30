@@ -1,4 +1,4 @@
-package com.mpp.template;
+package com.mpp;
 
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
@@ -7,7 +7,7 @@ import org.apache.logging.log4j.Logger;
 
 @Mod(modid = ModMeta.MOD_ID, name = ModMeta.NAME, version = ModMeta.VERSION,
      dependencies = "required-after:mixinbooter")
-public class TemplateMod
+public class IntegratedScriptingCallback
 {
     public static final String MODID = ModMeta.MOD_ID;
 

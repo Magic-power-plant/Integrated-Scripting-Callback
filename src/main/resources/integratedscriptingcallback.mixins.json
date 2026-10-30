@@ -1,9 +1,9 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "com.mpp.template.mixin",
+  "package": "com.mpp.mixin",
   "compatibilityLevel": "JAVA_8",
-  "refmap": "template.refmap.json",
+  "refmap": "integratedscriptingcallback.refmap.json",
   "mixins": [
   ],
   "client": [
