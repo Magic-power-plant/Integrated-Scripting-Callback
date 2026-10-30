@@ -1,0 +1,63 @@
+plugins {
+    id 'java'
+    id 'com.gtnewhorizons.retrofuturagradle' version '2.0.3'
+}
+
+version = project.mod_version
+group = project.mod_group
+base.archivesName.set(project.mod_id)
+
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(8))
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+def mixinConfig = project.mixin_config
+def mixinRefmap = new groovy.json.JsonSlurper()
+        .parse(file("src/main/resources/${mixinConfig}")).refmap
+if (!(mixinRefmap instanceof String) || mixinRefmap.trim().isEmpty()) {
+    throw new GradleException("${mixinConfig} must declare a non-empty refmap")
+}
+
+minecraft {
+    mcVersion.set(project.mc_version)
+    mcpMappingChannel.set(project.mapping_channel)
+    mcpMappingVersion.set(project.mapping_version)
+    extraRunJvmArguments.add('-Dfml.coreMods.load=zone.rong.mixinbooter.MixinBooterPlugin')
+    injectedTags.putAll([
+        MOD_ID: project.mod_id,
+        NAME: project.mod_name,
+        VERSION: project.mod_version
+    ])
+}
+
+tasks.named('injectTags') {
+    outputClassName.set("${project.mod_group}.ModMeta")
+}
+
+repositories {
+    maven { url = 'https://maven.cleanroommc.com' }
+}
+
+dependencies {
+    def mixin = modUtils.enableMixins("zone.rong:mixinbooter:${project.mixinbooter_version}", mixinRefmap)
+    implementation(mixin) { transitive = false }
+    annotationProcessor mixin
+}
+
+tasks.named('processResources') {
+    filteringCharset = 'UTF-8'
+    def properties = [modid: project.mod_id, modname: project.mod_name,
+                      version: project.mod_version, mcversion: project.mc_version]
+    inputs.properties(properties)
+    filesMatching('mcmod.info') {
+        expand(properties)
+    }
+}
+
+tasks.named('jar') {
+    manifest.attributes('MixinConfigs': mixinConfig)
+}

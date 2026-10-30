@@ -1,0 +1,19 @@
+pluginManagement {
+    repositories {
+        maven {
+            url = 'https://nexus.gtnewhorizons.com/repository/public/'
+            content {
+                includeGroup 'com.gtnewhorizons'
+                includeGroup 'com.gtnewhorizons.retrofuturagradle'
+            }
+        }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'template-team-1.12.2'

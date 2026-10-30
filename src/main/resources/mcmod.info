@@ -1,0 +1,16 @@
+[
+{
+  "modid": "${modid}",
+  "name": "${modname}",
+  "description": "MPP DevTemplate",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": [],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
