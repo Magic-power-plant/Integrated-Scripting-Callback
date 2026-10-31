@@ -5,6 +5,7 @@ import com.google.common.collect.Maps;
 import com.mpp.GeneralConfig;
 import com.mpp.IntegratedScriptingCallback;
 import com.mpp.integratedscripting.api.language.ILanguageHandler;
+import com.mpp.integratedscripting.client.gui.component.TerminalHeaderLayout;
 import com.mpp.integratedscripting.client.gui.component.input.GuiWidgetDialog;
 import com.mpp.integratedscripting.client.gui.component.input.GuiWidgetTextArea;
 import com.mpp.integratedscripting.client.gui.image.ScriptImages;
@@ -53,14 +54,16 @@ import java.util.stream.Collectors;
  *
  * <p>1.12.2 port of the 1.20 {@code ContainerScreenTerminalScripting}
  * (docs/PORTING-1.12.2.md §7.9.2). The 1.12 {@code GuiMultipart} already
- * provides the background texture, the part name and the error component, so
- * only the disk selector, the script file list, the text editor, the removal
- * dialog and the script sync have to be added here.</p>
+ * provides the background texture, the error component and the settings button,
+ * so only the disk selector, the script file list, the text editor, the removal
+ * dialog and the script sync have to be added here. The part name is drawn by
+ * this screen instead of {@code GuiMultipart}, because the base class puts it at
+ * (8, 6) where the disk selector lives (see {@link TerminalHeaderLayout}).</p>
  *
  * <p>The screen draws its own widgets in the background layer because 1.12 has
  * no renderable-widget system; the foreground layer is translated to
  * {@code guiLeft/guiTop} by {@code GuiContainer} and is therefore only used for
- * the disk label and the error tooltip.</p>
+ * the part name, the disk label and the error tooltip.</p>
  *
  * @author rubensworks
  */
@@ -180,7 +183,10 @@ public class GuiTerminalScripting
     private GuiArrowedListField<Integer> createDiskField() {
         List<Integer> disks = getTerminalContainer().getAvailableDiskList();
         GuiArrowedListField<Integer> field = new GuiArrowedListField<>(0, this.fontRenderer,
-                getGuiLeftTotal() + 30, getGuiTopTotal() + 4, 42, 15, true, true, disks);
+                getGuiLeftTotal() + TerminalHeaderLayout.DISK_FIELD_X,
+                getGuiTopTotal() + TerminalHeaderLayout.DISK_FIELD_Y,
+                TerminalHeaderLayout.DISK_FIELD_WIDTH, TerminalHeaderLayout.DISK_FIELD_HEIGHT,
+                true, true, disks);
         field.setMaxStringLength(5);
         field.setTextColor(0xFFFFFF);
         field.setCanLoseFocus(true);
@@ -559,9 +565,14 @@ public class GuiTerminalScripting
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
-        // GuiMultipart only declares the SRG-named variant; delegate to it (it draws
-        // the background texture and the part name).
-        super.func_146976_a(partialTicks, mouseX, mouseY);
+        // GuiMultipart#func_146976_a blits the background *and* the part name at
+        // (8, 6), which collides with the disk selector of this screen. Only the
+        // texture is drawn here; the part name is placed at
+        // TerminalHeaderLayout.TITLE_X/Y in the foreground layer instead.
+        GlStateManager.color(1F, 1F, 1F, 1F);
+        this.mc.getTextureManager().bindTexture(this.texture);
+        this.drawTexturedModalRect(getGuiLeftTotal(), getGuiTopTotal(), 0, 0,
+                this.xSize - 2 * this.offsetX, this.ySize - 2 * this.offsetY);
 
         ContainerTerminalScripting container = getTerminalContainer();
         RenderHelpers.bindTexture(this.texture);
@@ -601,7 +612,18 @@ public class GuiTerminalScripting
         // Still translated to guiLeft/guiTop by GuiContainer.
         super.drawGuiContainerForegroundLayer(mouseX, mouseY);
 
-        this.fontRenderer.drawString(L10NHelpers.localize("gui.integratedscripting.disk") + ":", 8, 6, 0xFFFFFF);
+        // Part name, in the wide header box above the editor (1.20 titleLabelX/Y).
+        // Drawing it here instead of letting GuiMultipart draw it at (8, 6) keeps it
+        // clear of the disk label and the disk selector below.
+        this.fontRenderer.drawString(L10NHelpers.localize(getPartType().getTranslationKey()),
+                TerminalHeaderLayout.TITLE_X, TerminalHeaderLayout.TITLE_Y,
+                TerminalHeaderLayout.TEXT_COLOR, false);
+
+        String diskLabel = L10NHelpers.localize("gui.integratedscripting.disk") + ":";
+        this.fontRenderer.drawString(diskLabel,
+                TerminalHeaderLayout.diskLabelX(this.fontRenderer.getStringWidth(diskLabel)),
+                TerminalHeaderLayout.DISK_LABEL_Y, TerminalHeaderLayout.TEXT_COLOR, false);
+
         this.displayErrors.drawForeground(getTerminalContainer().getReadErrors(), ERROR_X, ERROR_Y,
                 mouseX, mouseY, this, getGuiLeftTotal(), getGuiTopTotal());
     }

@@ -1,6 +1,7 @@
 package com.mpp.integratedscripting.client.gui.component.input;
 
 import com.google.common.collect.Lists;
+import com.mpp.integratedscripting.callback.TextStyle;
 import com.mpp.integratedscripting.client.gui.component.TextLayout;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
@@ -35,8 +36,10 @@ public class GuiWidgetTextArea extends Gui {
 
     public static final int ROW_HEIGHT = 9;
     private static final int LINE_NUMBER_WIDTH = 14;
-    private static final int TEXT_COLOR = 0xE0E0E0;
-    private static final int LINE_NUMBER_COLOR = 0x787878;
+    // The editor is drawn on the light panel of the terminal texture, so the code
+    // colours are dark; see TextStyle for the contrast ratios.
+    private static final int TEXT_COLOR = TextStyle.DEFAULT_RGB;
+    private static final int LINE_NUMBER_COLOR = 0x6E6E6E;
     private static final int SELECTION_COLOR = 0x80B0B0FF;
     private static final int CURSOR_COLOR = 0xFF000000;
     private static final long DOUBLE_CLICK_MILLIS = 250L;
@@ -478,8 +481,10 @@ public class GuiWidgetTextArea extends Gui {
         if (style == null) {
             return TEXT_COLOR;
         }
-        String formatted = style.toString();
-        return this.fontRenderer.getColorCode(formatted.charAt(1));
+        // Semantic token styles carry a tuned RGB for this light editor panel;
+        // anything else falls back to the regular TextFormatting colour code.
+        return TextStyle.rgbOf(style,
+                this.fontRenderer.getColorCode(style.toString().charAt(1)));
     }
 
     private int getTextOffset() {
