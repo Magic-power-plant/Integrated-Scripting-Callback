@@ -1,0 +1,222 @@
+# 集成脚本：回调 - 简体中文（zh_cn）
+# 完整语言文件。键名沿用 1.12.2 的 Cyclops 约定：
+#   方块：  tile.blocks.<modid>.<name>.name
+#   物品：  item.items.<modid>.<name>.name
+#   部件：  parttype.parttypes.<modid>.<name>.name
+#   运算符：operator.operators.<modid>.<type>.<name>.name
+# 其余键为自定义键，由代码/XML 直接引用。
+
+itemGroup.integratedscriptingcallback=集成脚本：回调
+general.integratedscripting.description=编写脚本，处理动态联合中的复杂操作。
+
+# 进度
+advancement.integratedscripting.mendesite=门山石多多益善
+advancement.integratedscripting.mendesite.desc=合成一个门山石方块，它是集成脚本的基础资源。
+advancement.integratedscripting.scripting_disk=这可不是软盘！
+advancement.integratedscripting.scripting_disk.desc=合成一个脚本磁盘，用于存储脚本数据。
+advancement.integratedscripting.scripting_drive=看我一路狂飙
+advancement.integratedscripting.scripting_drive.desc=合成一个脚本驱动器，这样你就能把脚本加载到网络中。
+advancement.integratedscripting.terminal_open=脚本的发现
+advancement.integratedscripting.terminal_open.desc=打开脚本终端界面。
+advancement.integratedscripting.terminal_bind=脚本的崛起
+advancement.integratedscripting.terminal_bind.desc=创建一个脚本，并将其绑定到变量卡。
+advancement.integratedscripting.terminal_display=脚本的释放
+advancement.integratedscripting.terminal_display.desc=在显示器中显示由脚本计算出的值。
+advancement.integratedscripting.filter_chest=强到离谱的物品列表过滤
+advancement.integratedscripting.filter_chest.desc=使用基于脚本的函数，过滤从箱子中读取的物品列表。
+
+# 方块
+tile.blocks.integratedscriptingcallback.mendesite.name=门山石
+tile.blocks.integratedscriptingcallback.mendesite.info=一种半透明的矿物，用于制作脚本相关物品。
+tile.blocks.integratedscriptingcallback.scripting_drive.name=脚本驱动器
+tile.blocks.integratedscriptingcallback.scripting_drive.info=将脚本磁盘接入网络。
+tile.blocks.integratedscriptingcallback.part_terminal_scripting_block.name=脚本终端
+parttype.parttypes.integratedscriptingcallback.terminal_scripting.name=脚本终端
+parttype.parttypes.integratedscriptingcallback.terminal_scripting.info=管理网络中脚本驱动器上的脚本。
+
+# 物品
+item.items.integratedscriptingcallback.scripting_disk.name=脚本磁盘
+item.items.integratedscriptingcallback.scripting_disk.info=存储脚本。
+item.integratedscripting.scripting_disk.id=ID: %s
+item.integratedscripting.scripting_disk.bytes=字节: %s
+
+# 图形界面
+gui.integratedscripting.disk=磁盘
+gui.integratedscripting.script=脚本
+gui.integratedscripting.create_file=新建文件
+gui.integratedscripting.removal_dialog.title=确认删除脚本
+gui.integratedscripting.removal_dialog.message=确定要删除“%s”吗？
+gui.integratedscripting.removal_dialog.delete=删除
+gui.integratedscripting.removal_dialog.keep=保留
+gui.integratedscripting.error.invalid_member=请在脚本编辑器内选中一个有效的函数名或变量名后再进行绑定。
+gui.integratedscripting.error.invalid_member.current=当前选中项：“%s”
+
+# 值类型翻译
+valuetype.integratedscripting.error.translation.unknown_to_graal=找不到从 %s 值到 Graal 的翻译器。
+valuetype.integratedscripting.error.translation.unknown_to_graal_nbt=在 NBT 翻译期间找不到从 %s 值到 Graal 的翻译器。
+valuetype.integratedscripting.error.translation.unknown_from_graal=找不到处理 %s 类型 Graal 值的翻译器。
+valuetype.integratedscripting.error.translation.list_infinite=无法将无限列表翻译为脚本语言。
+valuetype.integratedscripting.error.translation.nbt_unknown=无法翻译类型为 %s 的 NBT 成员。
+valuetype.integratedscripting.error.translation.nbt_unmatched=无法将字段 %s 解释为 NBT。
+valuetype.integratedscripting.error.translation.nbt_not_compound=值类型 %s 不是 NBT 复合标签；启用 nbtScalarWrapper 配置项可包装标量。
+valuetype.integratedscripting.error.translation.unsupported_translateToNbt=将 %s“%s”转换为 NBT 的操作非法。
+valuetype.integratedscripting.error.translation.proxyobject_putMember=将键“%s”添加到只读的 %s 的操作非法。
+valuetype.integratedscripting.error.object_serialize=无法序列化值类型 %s（值 %s）。
+valuetype.integratedscripting.error.object_not_compound=值类型 %s 需要 NBT 复合标签。
+
+# 运算符
+operator.operators.integratedscriptingcallback.integratedscript.basename=集成脚本 %s
+operator.operators.integratedscriptingcallback.integratedscript.name=集成脚本
+operator.operators.integratedscriptingcallback.integratedscript.graal_function.name=Graal 函数
+operator.integratedscripting.error.no_graal_serialization=集成脚本无法被序列化
+
+# 脚本变量
+script.integratedscripting.tooltip.disk=§e§o磁盘 ID: §r§o%s
+script.integratedscripting.tooltip.path=§e§o脚本路径: §r§o%s
+script.integratedscripting.tooltip.member=§e§o成员: §r§o%s
+script.integratedscripting.error.invalid_network=找不到有效的脚本网络。
+script.integratedscripting.error.disk_not_in_network=在当前网络中找不到 ID 为 %s 的磁盘。
+script.integratedscripting.error.path_not_in_network=ID 为 %s 的磁盘不包含脚本“%s”。
+script.integratedscripting.error.member_not_in_network=ID 为 %s 的磁盘中不包含成员“%s”（脚本“%s”）。
+script.integratedscripting.error.unsupported_language=脚本“%s”的语言不受支持。
+script.integratedscripting.error.script_read=读取脚本“%s”（磁盘 %s）时发生错误：%s
+script.integratedscripting.error.script_exec=执行成员“%s”时发生错误（脚本“%s”，磁盘 %s）：%s
+script.integratedscripting.error.invalid_type=磁盘 %3$s 上脚本“%2$s”中的脚本成员“%1$s”应暴露类型为 %4$s 的变量，但实际找到的是 %5$s。
+script.integratedscripting.error.no_scripting_data=此侧无法获取脚本数据。
+script.integratedscripting.error.script_invalidated=磁盘 %2$s 上的已编译脚本“%1$s”因文件发生更改而被释放。请再次求值该变量以重新编译。
+script.integratedscripting.error.runtime_missing=未安装 JavaScript 运行时（%s）。请安装配套模组 integratedscriptingcallbacklibs。
+
+# ------ 《论动态联合》手册内容 ------
+
+info_book.integratedscripting.section.main=脚本
+
+info_book.integratedscripting.introduction=简介
+info_book.integratedscripting.introduction.text1=&l集成脚本&r 是 &l动态联合&r 的扩展，用于编写脚本以处理 &l动态联合&r 网络中的复杂操作。默认情况下，本模组自带对 JavaScript 脚本语言的支持。
+info_book.integratedscripting.introduction.text2=它允许你用便捷的脚本语法来定义 &l动态联合&r 的逻辑运算，而不必使用标准的、基于变量卡的可视化方式；对于高级操作链来说，后者可能会变得十分繁琐。
+info_book.integratedscripting.introduction.text3=例如，借助它可以轻松定义复杂的物品列表过滤器，比如&o“可损坏、属于模组 X，且对应方块只能用钻石镐开采的物品”&r；又或者&o“取出该列表中堆叠数量第二大的物品”&r。
+info_book.integratedscripting.introduction.text4=建议在使用本模组前具备基础编程知识，不过你也可以通过本书后面的教程来逐步学习。
+
+info_book.integratedscripting.materials=材料
+info_book.integratedscripting.materials.text1=在开始编写脚本之前，你需要一些 &l门山石&r 方块。这种方块极具可塑性，是存储和处理脚本的良好基础。&l门山石&r 由 &l门瑞欧树脂&r 与 &l安山岩&r 在 &l烘干池&r 中结合而成。
+
+info_book.integratedscripting.concepts=概念
+info_book.integratedscripting.concepts.text1=编辑、存储脚本并让其服务于网络，需要 3 个要素：&l脚本终端&r、&l脚本磁盘&r 和 &l脚本驱动器&r。
+info_book.integratedscripting.concepts.text2=&l脚本磁盘&r 用于存储原始脚本内容，但自身无法做任何事。
+info_book.integratedscripting.concepts.text3=&l脚本驱动器&r 允许你插入一张 &l脚本磁盘&r，从而将其内容暴露给网络。
+info_book.integratedscripting.concepts.text4=&l脚本终端&r 允许你查看、管理并编辑当前网络中由 &l脚本驱动器&r 暴露的所有脚本。
+info_book.integratedscripting.concepts.text5=以下将对这三个要素逐一详细说明。
+
+info_book.integratedscripting.disk=脚本磁盘
+info_book.integratedscripting.disk.text1=&l脚本磁盘&r 负责存储脚本，需要插入 &l脚本驱动器&r 中使用。它们可以由若干 &l变量卡&r 与 &l门山石&r 合成获得。
+info_book.integratedscripting.disk.text2=&l脚本磁盘&r 插入 &l脚本驱动器&r 后，会获得一个唯一的数字标识符。该标识符用于在 &l脚本终端&r 中修改此磁盘上的脚本，同时也用于将脚本成员与 &l变量卡&r 关联起来。
+info_book.integratedscripting.disk.text3=在不丢失脚本数据的前提下，你可以放心地把 &l脚本磁盘&r 移到另一个 &l脚本驱动器&r 中，即使换了网络也没问题。不过，引用该脚本标识符的 &l变量卡&r 一旦不在同一网络中，就会开始报错。
+info_book.integratedscripting.disk.text4=&l脚本磁盘&r 的存储容量没有上限，但出于管理上的考虑，建议把脚本拆分到多张磁盘上。
+
+info_book.integratedscripting.drive=脚本驱动器
+info_book.integratedscripting.drive.text1=每个 &l脚本驱动器&r 都是一个连接到 &l动态联合&r 网络的方块，可接受一张 &l脚本磁盘&r，从而将磁盘中的脚本内容暴露给网络。
+info_book.integratedscripting.drive.text2=它由 &l变量卡箱&r、&l唱片机&r 以及若干 &l脚本磁盘&r 合成。
+
+info_book.integratedscripting.terminal=脚本终端
+info_book.integratedscripting.terminal.text1=&l脚本终端&r 是一个必须连接到 &l动态联合&r 网络的部件，用于管理存储在该网络 &l脚本磁盘&r 中的脚本。
+info_book.integratedscripting.terminal.text2=右键点击已放置的终端后，会显示一个简化的 &o集成开发环境&r（IDE），你可以用它编辑脚本。
+info_book.integratedscripting.terminal.text3=在屏幕左上角，你可以选择一张已连接到网络的 &l脚本磁盘&r 的标识符，随后该磁盘中存储的所有脚本文件都会显示在下方的脚本文件列表中。
+info_book.integratedscripting.terminal.text4=如果磁盘中还没有任何脚本文件，你可以点击屏幕左下角的“+”按钮来创建。
+info_book.integratedscripting.terminal.text5=屏幕左侧的脚本文件列表用于选择要编辑的脚本。点击某个脚本后，其可编辑内容将显示在屏幕右侧。
+info_book.integratedscripting.terminal.text6=屏幕右侧的文本编辑框允许你编辑脚本文件的内容，每次修改后都会自动保存。
+info_book.integratedscripting.terminal.text7=编辑器会进行有限的语法高亮，但目前还无法检测语法错误。语法错误会在通过 &l变量卡&r 执行脚本时报告。
+info_book.integratedscripting.terminal.text8=若要将某个脚本成员用作 &l动态联合&r 逻辑，你可以把它绑定到一张 &l变量卡&r 上。
+info_book.integratedscripting.terminal.text9=为此，请先在文本编辑器中用光标选中一个脚本成员，例如某个变量名或函数名。
+info_book.integratedscripting.terminal.text10=然后，将一张 &l变量卡&r 插入屏幕右侧的槽位，即可将其绑定到这个脚本成员。
+info_book.integratedscripting.terminal.text11=这张 &l变量卡&r 现在就可以在网络的其他地方使用了，例如在 &l显示器&r 中显示变量成员，或将函数成员用作物品列表过滤器中的运算符。
+info_book.integratedscripting.terminal.text12=下一章将详细介绍如何编写脚本。
+
+info_book.integratedscripting.writing=编写脚本
+
+info_book.integratedscripting.writing.js=JavaScript
+info_book.integratedscripting.writing.js.text1=本模组允许使用 JavaScript 语法编写脚本，ECMAScript（ECMA-262）支持的所有特性均可使用。
+info_book.integratedscripting.writing.js.text2=请注意，&orequire&r 和 &ofs&r 等 Node.js 专有功能不可用。如果你习惯开发 Node.js 应用，可以借助 Webpack 等外部工具让它们保持兼容。
+
+info_book.integratedscripting.writing.variables=常量与变量
+info_book.integratedscripting.writing.variables.text1=你熟悉的全部动态联合值类型（例如 &6Integer&0、&9Boolean&0、&8Item&0 等）在 JavaScript 中都可以使用，反之亦然。
+info_book.integratedscripting.writing.variables.text2=在 JavaScript 中创建值，并让它成为静态 &l变量卡&r 的值，最直接的方法就是用 &olet&r 或 &oconst&r 在 JavaScript 中定义一个变量成员。
+info_book.integratedscripting.writing.variables.text3=&olet&r 定义的变量可在脚本稍后重新赋值，例如计数器；&oconst&r 定义的变量则不能重新赋值。
+info_book.integratedscripting.writing.variables.text4=要在 &l变量卡&r 中使用这个值，你需要在脚本终端文本编辑器中选中该变量成员名，然后在右侧槽位插入一张空的 &l变量卡&r。现在你就能像平常一样使用这张 &l变量卡&r 了，例如在 &l显示器&r 中显示它的值。
+info_book.integratedscripting.writing.variables.text5=通过 JavaScript 创建变量，主要适用于使用 &l逻辑编程器&r 不方便创建的复杂值，例如带有特定值的超长 &4String&0。下面给出了一些创建此类值的示例。
+
+info_book.integratedscripting.writing.functions=函数
+info_book.integratedscripting.writing.functions.text1=由于 &2Operator&0（运算符）在动态联合逻辑中是一等公民，它们也可以通过 JavaScript 函数创建。
+info_book.integratedscripting.writing.functions.text2=任何创建 JavaScript 函数的方式都可以用来创建 &2Operator&0，例如使用 &ofunction&r 关键字，或创建自定义 lambda。
+info_book.integratedscripting.writing.functions.text3=函数可以接受若干参数；当它们通过动态联合逻辑执行时，这些参数会接收常规的动态联合值，并被转换为 JavaScript 值。
+info_book.integratedscripting.writing.functions.text4=把 JavaScript 函数作为 &2Operator&0 绑定到 &l变量卡&r 的方式与常量、变量相同：在脚本终端文本编辑器中选中函数成员名，并将其绑定到 &l变量卡&r。此后，凡是接受 &2Operator&0 的地方都可以使用这个值。
+info_book.integratedscripting.writing.functions.text5=例如，你可以创建一个接受单个 &8Item&0 参数、返回 &9Boolean&0 的函数，把它用作过滤 &2Operator&0，以过滤从箱子中读取的物品列表。
+info_book.integratedscripting.writing.functions.text6=下面给出了一些可创建的不同类型函数的示例。
+
+info_book.integratedscripting.writing.globals=全局函数
+info_book.integratedscripting.writing.globals.text1=编写 JavaScript 代码时，你可以利用全局变量 &oidContext&r，通过 &oops&r 字段以函数形式访问全部动态联合运算符。这样在创建新运算符时就能复用内置运算符。
+info_book.integratedscripting.writing.globals.text2=例如，你可以编写一个 &8Item&0 过滤器，检查物品是否可堆叠、且堆叠数量至少为 16，如下所示。
+info_book.integratedscripting.writing.globals.text3=要了解想执行的运算符叫什么名字，可以查看它们在 &l逻辑编程器&r 内运算符提示框中的全局名称，或本书“逻辑编程”部分运算符列表中的名称。在这个 1.12.2 移植版中，名称沿用 1.12 的运算符名，例如 &oitemstackStackable&r 和 &oitemstackSize&r。
+info_book.integratedscripting.writing.globals.text4=由于通过 &oidContext&r 调用运算符可能变得非常啰嗦，你可以选择把运算符存入自定义常量变量，如第二个示例所示。或者，你也可以使用下一节将要介绍的 &o对象方法&r。
+
+info_book.integratedscripting.writing.methods=对象方法
+info_book.integratedscripting.writing.methods.text1=为了抵消全局函数的啰嗦，你可以使用 &l对象方法&r 更紧凑地编写代码。
+info_book.integratedscripting.writing.methods.text2=&8Block&0（方块）、&8Item&0（物品）、&8Fluid&0（流体）等对象值类型在 JavaScript 中使用时会附带 &l方法&r。
+info_book.integratedscripting.writing.methods.text3=对象方法本质上就是普通函数，只是它们的第一个参数与对象值绑定。
+info_book.integratedscripting.writing.methods.text4=例如，全局函数 &oitemstackStackable&r 接受一个 &8Item&0 参数并输出 &9Boolean&0。该函数也以 &ostackable&r 这个名字作为 &8Item&0 值上的方法提供，接受零个参数。
+info_book.integratedscripting.writing.methods.text5=接受两个或更多参数的全局函数会作为对象值上的方法提供，所有参数依次前移一位。例如，全局函数 &oitemstackStrength&r 接受一个 &8Item&0 和一个 &8Block&0 参数，同时也作为 &8Item&0 上只接受单个 &8Block&0 参数的方法提供。
+
+info_book.integratedscripting.advanced=进阶
+
+info_book.integratedscripting.advanced.transient_storage=临时状态存储
+info_book.integratedscripting.advanced.transient_storage.text1=由于动态联合基于函数式编程原则，基本上无法跟踪状态，除非借助 &l延迟器&r 之类的外部手段。
+info_book.integratedscripting.advanced.transient_storage.text2=由于 JavaScript 语言兼具函数式与命令式编程的特性，状态跟踪在一定程度上成为可能。
+info_book.integratedscripting.advanced.transient_storage.text3=具体来说，如果你在函数外部声明一个可变变量（例如使用 &olet&r），就可以通过函数调用修改它的值。
+info_book.integratedscripting.advanced.transient_storage.text4=这样你就能跟踪状态，例如统计函数被调用的次数，或计算某些值的滑动平均值。
+info_book.integratedscripting.advanced.transient_storage.text5=使用这些变量时有一个重要注意事项：它们的状态只是临时的。具体来说，只要网络中的某张变量卡被重新插入，或服务器重启，它们的值就可能被重置。
+info_book.integratedscripting.advanced.transient_storage.text6=因此，你不能假定这些值会一直存在。如果需要持久化数据存储，最好使用 &l延迟器&r。
+
+info_book.integratedscripting.advanced.external_editing=外部编辑
+info_book.integratedscripting.advanced.external_editing.text1=如果你能访问运行单人游戏或多人游戏的文件系统，就可以通过任意外部编辑器访问脚本文件。这样你就能使用自己钟爱的 IDE（例如 Vi，但绝不是 Emacs）来编写脚本。
+info_book.integratedscripting.advanced.external_editing.text2=脚本文件可通过 &oworld/integratedscriptingcallback/&r 目录访问（单人世界见 &osaves/&r）。在这里，你会看到按 ID 命名的各个 &l脚本磁盘&r 目录。每个 &l脚本磁盘&r 目录内都存放着该磁盘中的所有脚本文件。
+info_book.integratedscripting.advanced.external_editing.text3=即使游戏正在运行，你也可以放心地通过外部编辑器修改这些脚本文件。在外部保存文件后，游戏中的文件会自动更新，依赖它们的变量也会随之更新。
+info_book.integratedscripting.advanced.external_editing.text4=如果你的外部编辑器支持（现代 IDE 都支持），通过 &l脚本终端&r 修改脚本文件时，外部编辑器中的文件也会同步更新。
+
+info_book.integratedscripting.advanced.logging=日志
+info_book.integratedscripting.advanced.logging.text1=对于复杂脚本，你可能需要临时写入外部日志文件来进行调试。
+info_book.integratedscripting.advanced.logging.text2=JavaScript 允许你调用 &oconsole.log()&r 和 &oconsole.error()&r 等函数，分别向 &o标准输出&r 和 &o标准错误&r 流写入消息。
+info_book.integratedscripting.advanced.logging.text3=调用其中任何一个函数时，日志消息会分别写入脚本对应的 &o.stdout&r 和 &o.stderr&r 文件。
+info_book.integratedscripting.advanced.logging.text4=例如，如果你的脚本位于 &omyfile.js&r，日志消息将写入 &omyfile.js.stdout&r。
+info_book.integratedscripting.advanced.logging.text5=这些 &o.stdout&r 和 &o.stderr&r 文件可以通过 &l脚本终端&r 访问，也可以通过外部编辑访问。
+info_book.integratedscripting.advanced.logging.text6=为避免日志文件变得过大，其大小设有上限。默认限制为 2096 行。如果你需要更多行数，请咨询服务器管理员。
+
+info_book.integratedscripting.advanced.typescript=TypeScript
+info_book.integratedscripting.advanced.typescript.text1=TypeScript 是 JavaScript 语言广为人知的超集，增加了类型支持。它允许开发者通过定义变量和函数的类型，编写类型安全的 JavaScript。
+info_book.integratedscripting.advanced.typescript.text2=虽然集成脚本仅支持纯 JavaScript，但针对所有可用的全局函数、值类型及其方法，都提供了 TypeScript &o类型声明文件&r。
+info_book.integratedscripting.advanced.typescript.text3=通过外部 IDE 编辑脚本时，可以加载该类型声明文件来编写类型安全的脚本。仅当你了解 TypeScript 并知道如何使用它时，才建议这样做。
+info_book.integratedscripting.advanced.typescript.text4=类型声明文件位于 &oworld/integratedscriptingcallback/integratedscriptingcallback.d.ts&r（单人世界见 &osaves/&r）。该文件会在每次世界重启时自动重新生成，因此你不应手动修改它。
+
+info_book.integratedscripting.section.tutorials=脚本教程
+
+info_book.integratedscripting.tutorials.introduction=简介
+info_book.integratedscripting.tutorials.introduction.text1=本节包含若干教程，帮助你学习 &l集成脚本&r，它是 &l动态联合&r 的附加模组，用于编写脚本以处理复杂操作。
+
+info_book.integratedscripting.tutorials.basics=脚本基础
+info_book.integratedscripting.tutorials.basics.text1=&l门山石&r 方块是制作脚本相关物品的基础材料。让我们先用 &l烘干池&r 造一些吧！
+info_book.integratedscripting.tutorials.basics.text2=接下来，我们将用这些 &l门山石&r 方块制作一些 &l脚本磁盘&r 和 &l脚本驱动器&r。&l脚本磁盘&r 可以存储脚本数据，而 &l脚本驱动器&r 则允许你把这些磁盘接入网络。
+info_book.integratedscripting.tutorials.basics.text3=最后，让我们放置一个 &l脚本驱动器&r 并放入一张 &l脚本磁盘&r。这样我们就能在下一节教程中存储脚本了。
+
+info_book.integratedscripting.tutorials.terminal=使用脚本终端
+info_book.integratedscripting.tutorials.terminal.text1=上一步中，我们制作并放置了 &l脚本磁盘&r 和 &l脚本驱动器&r。在本教程中，我们将了解如何真正 &o编写&r 脚本，并将其绑定到 &l变量卡&r。
+info_book.integratedscripting.tutorials.terminal.text2=首先，合成一个 &l脚本终端&r，将其放置在连接到 &l脚本驱动器&r 的线缆上，然后右键点击 &l脚本终端&r 将其打开。
+info_book.integratedscripting.tutorials.terminal.text3=你会看到一个编辑器，可在其中访问网络能访问的各张 &l脚本磁盘&r 里存储的所有脚本文件。点击屏幕左上角的箭头，可以在不同的 &l脚本磁盘&r 之间切换。
+info_book.integratedscripting.tutorials.terminal.text4=此时你的网络中还没有任何脚本文件，因此请点击屏幕左下角的“+”按钮新建一个文件。然后点击这个新文件将其打开，再点击屏幕右侧的文本编辑框来编辑文件、编写 &oJavaScript&r 代码。
+info_book.integratedscripting.tutorials.terminal.text5=为简单起见，我们先创建一个常量值。写入类似 &oconst myVar = 123;&r 的内容即可。
+info_book.integratedscripting.tutorials.terminal.text6=最后一步，让我们把这张 &l变量卡&r 绑定到这个常量：在屏幕右侧的槽位插入一张空的 &l变量卡&r，然后用光标双击选中该变量。你的 &l变量卡&r 现在已绑定到这个常量值。此后你可以在网络中的任何地方使用这张 &l变量卡&r。试着在 &l显示器&r 中显示它吧！
+
+info_book.integratedscripting.tutorials.functions=脚本函数
+info_book.integratedscripting.tutorials.functions.text1=通过 JavaScript 创建常量值也许很有趣，但这些脚本真正的威力要在创建 &o函数&r 时才显现出来。
+info_book.integratedscripting.tutorials.functions.text2=通过 JavaScript 创建的函数可以作为 &2Operator&0 绑定到 &l变量卡&r，随后就能像平常一样在动态联合逻辑中使用。例如，你可以用它们定义集成管道导出器的过滤器，或计算列表中物品堆叠数量的中位数等复杂值。
+info_book.integratedscripting.tutorials.functions.text3=在本教程中，我们将创建一个接受单个 &8Item&0 参数、并输出 &9Boolean&0 的函数。这个函数将充当过滤器运算符，例如可用于过滤物品列表。
+info_book.integratedscripting.tutorials.functions.text4=具体来说，我们将使用 &l物品容器读取器&r 读取物品列表，并用 &l过滤器&r 与刚创建的函数对它进行过滤。你可以在编辑器中选中该函数，然后插入一张空的 &l变量卡&r，将其绑定为 &2Operator&0。
+info_book.integratedscripting.tutorials.functions.text5=本教程中，你可以自由选择过滤函数的任何实现方式。下面给出一个有效的示例脚本，你可以随意复制。
+info_book.integratedscripting.tutorials.functions.text6=要完成本教程，请在 &l显示器&r 中显示过滤后列表的结果。
+info_book.integratedscripting.tutorials.functions.text7=在这个示例脚本中，你会看到可以调用物品上的内置方法，例如 &ostackable()&r 和 &osize()&r。关于有哪些可用方法的更多细节，可在后面的完整手册中找到。
