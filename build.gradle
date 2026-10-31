@@ -5,7 +5,8 @@ plugins {
 
 version = project.mod_version
 group = project.mod_group
-base.archivesName.set(project.mod_id)
+// Decision B6: product name carries the mod identity and target MC version.
+base.archivesName.set("Integrated-Scripting-Callback-${project.mc_version}")
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(8))
@@ -13,6 +14,7 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xlint:deprecation']
 }
 
 def mixinConfig = project.mixin_config
@@ -26,10 +28,11 @@ minecraft {
     mcVersion.set(project.mc_version)
     mcpMappingChannel.set(project.mapping_channel)
     mcpMappingVersion.set(project.mapping_version)
+    // MixinBooter is the only coremod; business code does not use mixins (B5).
     extraRunJvmArguments.add('-Dfml.coreMods.load=zone.rong.mixinbooter.MixinBooterPlugin')
     injectedTags.putAll([
-        MOD_ID: project.mod_id,
-        NAME: project.mod_name,
+        MOD_ID : project.mod_id,
+        NAME   : project.mod_name,
         VERSION: project.mod_version
     ])
 }
@@ -40,12 +43,50 @@ tasks.named('injectTags') {
 
 repositories {
     maven { url = 'https://maven.cleanroommc.com' }
+    mavenCentral()
 }
 
 dependencies {
+    // 1.12.2 CyclopsCore / Integrated Dynamics / CommonCapabilities (deobf jars).
+    // compileOnly: they are provided by the player's mods folder at runtime.
+    compileOnly files('libs/CyclopsCore-1.12.2-1.6.7.jar')
+    compileOnly files('libs/IntegratedDynamics-1.12.2-1.1.11.jar')
+    compileOnly files('libs/CommonCapabilities-1.12.2-2.4.8.jar')
+
+    // Dev runtime only: lets runClient/runServer load CyclopsCore and ID as mods.
+    runtimeOnly files('libs/CyclopsCore-1.12.2-1.6.7.jar')
+    runtimeOnly files('libs/IntegratedDynamics-1.12.2-1.1.11.jar')
+    runtimeOnly files('libs/CommonCapabilities-1.12.2-2.4.8.jar')
+
+    // MixinBooter (RFG modUtils wires up the refmap).
     def mixin = modUtils.enableMixins("zone.rong:mixinbooter:${project.mixinbooter_version}", mixinRefmap)
     implementation(mixin) { transitive = false }
     annotationProcessor mixin
+
+    // GraalJS: compile-time plus dev runtime. Production is supplied by the
+    // separate integratedscriptingcallbacklibs mod (decision B2/B3).
+    compileOnly "org.graalvm.sdk:graal-sdk:${project.graal_version}"
+    compileOnly "org.graalvm.js:js:${project.graal_version}"
+    runtimeOnly "org.graalvm.sdk:graal-sdk:${project.graal_version}"
+    runtimeOnly "org.graalvm.js:js:${project.graal_version}"
+
+    // Unit tests compile against, and run with, the same 1.12.2 API jars.
+    testCompileOnly files('libs/CyclopsCore-1.12.2-1.6.7.jar')
+    testCompileOnly files('libs/IntegratedDynamics-1.12.2-1.1.11.jar')
+    testCompileOnly files('libs/CommonCapabilities-1.12.2-2.4.8.jar')
+    testRuntimeOnly files('libs/CyclopsCore-1.12.2-1.6.7.jar')
+    testRuntimeOnly files('libs/IntegratedDynamics-1.12.2-1.1.11.jar')
+    testRuntimeOnly files('libs/CommonCapabilities-1.12.2-2.4.8.jar')
+
+    compileOnly 'org.projectlombok:lombok:1.18.22'
+    annotationProcessor 'org.projectlombok:lombok:1.18.22'
+
+    testImplementation "org.graalvm.sdk:graal-sdk:${project.graal_version}"
+    testImplementation "org.graalvm.js:js:${project.graal_version}"
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:2.28.2'
+    testCompileOnly 'org.projectlombok:lombok:1.18.22'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
 }
 
 tasks.named('processResources') {
@@ -59,5 +100,61 @@ tasks.named('processResources') {
 }
 
 tasks.named('jar') {
-    manifest.attributes('MixinConfigs': mixinConfig)
+    // Decision M8 (docs/MILESTONES.md): the development-only acceptance harnesses
+    // drive a real client/server and must not ship. Whatever needs them reaches
+    // them reflectively through HarnessLoader, so excluding them here is safe.
+    exclude 'com/mpp/integratedscripting/acceptance/ServerAcceptance*.class'
+    exclude 'com/mpp/integratedscripting/client/gui/container/GuiSmokeHarness*.class'
+    exclude 'com/mpp/integratedscripting/client/gui/container/ResourceSmokeHarness*.class'
+    exclude 'com/mpp/integratedscripting/client/gui/container/ClientAcceptanceHarness*.class'
+    manifest.attributes(
+            'MixinConfigs'                 : mixinConfig,
+            'FMLCorePluginContainsFMLMod'  : 'false'
+    )
+}
+
+tasks.named('test') {
+    useJUnit()
+    testLogging { exceptionFormat = 'full' }
+    // Pure-logic tests must still see MC/Forge and the 1.12.2 API jars.
+    classpath += files(sourceSets.main.compileClasspath, sourceSets.main.output)
+    classpath += files('libs/CyclopsCore-1.12.2-1.6.7.jar',
+            'libs/IntegratedDynamics-1.12.2-1.1.11.jar',
+            'libs/CommonCapabilities-1.12.2-2.4.8.jar')
+    systemProperty 'fml.ignoreInvalidMinecraftCertificates', 'true'
+}
+
+// Temporary M5 acceptance hook: `./gradlew runClient -PguiSmoke` enables the
+// automated GUI harness (docs/MILESTONES.md M5).
+if (project.hasProperty('guiSmoke')) {
+    tasks.named('runClient') {
+        jvmArgs '-Disc.guiSmoke=true'
+    }
+}
+
+// Temporary M6 acceptance hook: `./gradlew runClient -PresourceSmoke` enables
+// the resource/info-book harness (docs/MILESTONES.md M6).
+if (project.hasProperty('resourceSmoke')) {
+    tasks.named('runClient') {
+        jvmArgs '-Disc.resourceSmoke=true'
+    }
+}
+
+// Temporary M7 acceptance hook: `./gradlew runServer -Pm7Smoke` (or runClient)
+// enables the server-side §11.2 harness (docs/MILESTONES.md M7).
+if (project.hasProperty('m7Smoke')) {
+    tasks.named('runServer') {
+        jvmArgs '-Disc.m7Smoke=true'
+    }
+    tasks.named('runClient') {
+        jvmArgs '-Disc.m7Smoke=true'
+    }
+}
+
+// Temporary M7 acceptance hook: `./gradlew runClient -Pm7Gui` enables the
+// GUI/Display Panel harness (docs/MILESTONES.md M7).
+if (project.hasProperty('m7Gui')) {
+    tasks.named('runClient') {
+        jvmArgs '-Disc.m7Gui=true'
+    }
 }

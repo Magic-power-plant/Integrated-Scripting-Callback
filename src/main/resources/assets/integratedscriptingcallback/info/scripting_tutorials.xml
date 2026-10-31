@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<section name="info_book.integratedscripting.section.tutorials">
+    <section name="info_book.integratedscripting.tutorials.introduction">
+        <paragraph>info_book.integratedscripting.tutorials.introduction.text1</paragraph>
+    </section>
+
+    <section name="info_book.integratedscripting.tutorials.basics">
+        <paragraph>info_book.integratedscripting.tutorials.basics.text1</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.basics.text2</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.basics.text3</paragraph>
+        <appendix type="integrateddynamics:drying_basin_recipe">
+            <item>integratedscriptingcallback:mendesite</item>
+        </appendix>
+        <appendix type="crafting_recipe"><item>integratedscriptingcallback:scripting_disk</item></appendix>
+        <appendix type="crafting_recipe"><item>integratedscriptingcallback:scripting_drive</item></appendix>
+        <appendix type="advancement_rewards" id="integratedscriptingcallback:basics">
+            <advancements>
+                <advancement id="integratedscriptingcallback:basics/mendesite" />
+                <advancement id="integratedscriptingcallback:basics/scripting_disk" />
+                <advancement id="integratedscriptingcallback:basics/scripting_drive" />
+            </advancements>
+            <rewards>
+                <reward type="item" amount="16">integratedscriptingcallback:mendesite</reward>
+                <reward type="item" amount="4">integratedscriptingcallback:scripting_disk</reward>
+                <reward type="item" amount="2">integratedscriptingcallback:scripting_drive</reward>
+            </rewards>
+        </appendix>
+    </section>
+
+    <section name="info_book.integratedscripting.tutorials.terminal">
+        <paragraph>info_book.integratedscripting.tutorials.terminal.text1</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.terminal.text2</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.terminal.text3</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.terminal.text4</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.terminal.text5</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.terminal.text6</paragraph>
+        <appendix type="crafting_recipe"><item>integratedscriptingcallback:part_terminal_scripting_item</item></appendix>
+        <appendix type="advancement_rewards" id="integratedscriptingcallback:terminal">
+            <advancements>
+                <advancement id="integratedscriptingcallback:terminal/open" />
+                <advancement id="integratedscriptingcallback:terminal/bind" />
+                <advancement id="integratedscriptingcallback:terminal/display" />
+            </advancements>
+            <rewards>
+                <reward type="item" amount="1">integratedscriptingcallback:part_terminal_scripting_item</reward>
+                <reward type="item" amount="16">integrateddynamics:variable</reward>
+            </rewards>
+        </appendix>
+    </section>
+
+    <section name="info_book.integratedscripting.tutorials.functions">
+        <paragraph>info_book.integratedscripting.tutorials.functions.text1</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.functions.text2</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.functions.text3</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.functions.text4</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.functions.text5</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.functions.text6</paragraph>
+        <paragraph>info_book.integratedscripting.tutorials.functions.text7</paragraph>
+        <appendix type="integrateddynamics:operator">operator.operators.integrateddynamics.operator.filter.name</appendix>
+        <appendix type="integrateddynamics:aspect">aspect.aspects.integrateddynamics.read.list.inventory.itemstacks.name</appendix>
+        <appendix type="textfield" scale="0.8">function filterItemMethods(item) {
+  return item.stackable() &amp;&amp; item.size() >= 16;
+}</appendix>
+        <appendix type="advancement_rewards" id="integratedscriptingcallback:functions">
+            <advancements>
+                <advancement id="integratedscriptingcallback:functions/filter_chest" />
+            </advancements>
+            <rewards>
+                <reward type="item" amount="4">integratedscriptingcallback:scripting_disk</reward>
+                <reward type="item" amount="16">integrateddynamics:variable</reward>
+            </rewards>
+        </appendix>
+    </section>
+</section>
+
+

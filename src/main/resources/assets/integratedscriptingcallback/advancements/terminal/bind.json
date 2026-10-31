@@ -1,0 +1,27 @@
+{
+  "display": {
+    "icon": {
+      "item": "integrateddynamics:variable",
+      "nbt": "{_type:\"integratedscriptingcallback:script\",disk:1,path:\"p\",member:\"m\",_id:1}"
+    },
+    "title": {
+      "translate": "advancement.integratedscripting.terminal_bind"
+    },
+    "description": {
+      "translate": "advancement.integratedscripting.terminal_bind.desc"
+    }
+  },
+  "parent": "integratedscriptingcallback:terminal/open",
+  "criteria": {
+    "criteria_0": {
+      "trigger": "integrateddynamics:variable_created",
+      "conditions": {
+        "block": "integratedscriptingcallback:part_terminal_scripting_block",
+        "variable_facade": {
+          "type": "integratedscriptingcallback:script"
+        }
+      }
+    }
+  }
+}
+

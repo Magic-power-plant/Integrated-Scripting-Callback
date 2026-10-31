@@ -1,0 +1,9 @@
+{
+  "parent": "block/orientable",
+  "textures": {
+    "top": "integratedscriptingcallback:blocks/scripting_drive_top",
+    "front": "integratedscriptingcallback:blocks/scripting_drive_side",
+    "side": "integratedscriptingcallback:blocks/scripting_drive_side"
+  }
+}
+

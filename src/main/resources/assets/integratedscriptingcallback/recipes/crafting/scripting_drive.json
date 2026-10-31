@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " D ",
+    "DSD",
+    " J "
+  ],
+  "key": {
+    "D": {
+      "item": "integratedscriptingcallback:scripting_disk"
+    },
+    "S": {
+      "item": "integrateddynamics:variablestore",
+      "data": 0
+    },
+    "J": {
+      "item": "minecraft:jukebox"
+    }
+  },
+  "result": {
+    "item": "integratedscriptingcallback:scripting_drive",
+    "data": 0
+  }
+}

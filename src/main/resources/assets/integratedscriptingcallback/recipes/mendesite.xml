@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<recipes>
+
+    <recipe type="integrateddynamics:dryingbasin">
+        <tag>mendesite</tag>
+        <condition type="config">menrilresin</condition>
+        <condition type="config">drying_basin</condition>
+        <condition type="config">mendesite</condition>
+        <input>
+            <item meta="5">minecraft:stone</item>
+            <fluid amount="1000">menrilresin</fluid>
+        </input>
+        <output>
+            <item>integratedscriptingcallback:mendesite</item>
+        </output>
+        <properties>
+            <duration>300</duration>
+        </properties>
+    </recipe>
+
+    <recipe type="integrateddynamics:mechanical_dryingbasin">
+        <tag>mendesite</tag>
+        <condition type="config">menrilresin</condition>
+        <condition type="config">mechanical_drying_basin</condition>
+        <condition type="config">mendesite</condition>
+        <input>
+            <item meta="5">minecraft:stone</item>
+            <fluid amount="1000">menrilresin</fluid>
+        </input>
+        <output>
+            <item>integratedscriptingcallback:mendesite</item>
+        </output>
+        <properties>
+            <duration>15</duration>
+        </properties>
+    </recipe>
+
+</recipes>

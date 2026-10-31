@@ -1,0 +1,28 @@
+{
+  "display": {
+    "icon": {
+      "item": "integratedscriptingcallback:mendesite",
+      "data": 0
+    },
+    "title": {
+      "translate": "advancement.integratedscripting.mendesite"
+    },
+    "description": {
+      "translate": "advancement.integratedscripting.mendesite.desc"
+    }
+  },
+  "parent": "integratedscriptingcallback:root",
+  "criteria": {
+    "criteria_0": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "item": "integratedscriptingcallback:mendesite"
+          }
+        ]
+      }
+    }
+  }
+}
+

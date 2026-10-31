@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "item": "integratedscriptingcallback:part_terminal_scripting_item",
+      "data": 0
+    },
+    "title": {
+      "translate": "advancement.integratedscripting.terminal_open"
+    },
+    "description": {
+      "translate": "advancement.integratedscripting.terminal_open.desc"
+    }
+  },
+  "parent": "integratedscriptingcallback:basics/scripting_drive",
+  "criteria": {
+    "criteria_0": {
+      "trigger": "cyclopscore:container_gui_open",
+      "conditions": {
+        "container_class": "com.mpp.integratedscripting.inventory.container.ContainerTerminalScripting"
+      }
+    }
+  }
+}
+

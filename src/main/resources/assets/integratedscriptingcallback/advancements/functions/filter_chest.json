@@ -1,0 +1,27 @@
+{
+  "display": {
+    "icon": {
+      "item": "minecraft:chest",
+      "data": 0
+    },
+    "title": {
+      "translate": "advancement.integratedscripting.filter_chest"
+    },
+    "description": {
+      "translate": "advancement.integratedscripting.filter_chest.desc"
+    }
+  },
+  "parent": "integratedscriptingcallback:terminal/bind",
+  "criteria": {
+    "criteria_0": {
+      "trigger": "integrateddynamics:part_variable_driven",
+      "conditions": {
+        "parttype": "display_panel",
+        "variable": {
+          "type": "integratedscriptingcallback:script"
+        }
+      }
+    }
+  }
+}
+

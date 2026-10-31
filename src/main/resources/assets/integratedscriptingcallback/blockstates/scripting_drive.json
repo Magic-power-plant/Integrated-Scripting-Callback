@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "integratedscriptingcallback:scripting_drive" },
+    "facing=east":  { "model": "integratedscriptingcallback:scripting_drive", "y": 90 },
+    "facing=south": { "model": "integratedscriptingcallback:scripting_drive", "y": 180 },
+    "facing=west":  { "model": "integratedscriptingcallback:scripting_drive", "y": 270 }
+  }
+}

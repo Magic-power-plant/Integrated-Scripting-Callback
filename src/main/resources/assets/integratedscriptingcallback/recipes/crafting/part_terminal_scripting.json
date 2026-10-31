@@ -1,0 +1,32 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "RMR",
+    "VDW",
+    "R R"
+  ],
+  "key": {
+    "R": {
+      "type": "forge:ore_dict",
+      "ore": "dustRedstone"
+    },
+    "M": {
+      "item": "integratedscriptingcallback:mendesite"
+    },
+    "V": {
+      "item": "integrateddynamics:variable_transformer",
+      "data": 0
+    },
+    "D": {
+      "item": "integrateddynamics:part_display_panel_item",
+      "data": 0
+    },
+    "W": {
+      "item": "integrateddynamics:variable_transformer",
+      "data": 1
+    }
+  },
+  "result": {
+    "item": "integratedscriptingcallback:part_terminal_scripting_item"
+  }
+}

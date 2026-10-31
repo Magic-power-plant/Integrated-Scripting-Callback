@@ -20,6 +20,10 @@ build
 # other
 eclipse
 run
+logs
+# Vendored 1.20 reference tree used only for the porting diff (docs/AUDIT.md R10),
+# not part of this build.
+reference
 
 # Files from Forge MDK
 forge*changelog.txt

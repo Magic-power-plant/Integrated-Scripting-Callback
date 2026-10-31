@@ -1,0 +1,9 @@
+{
+  "parent": "integratedscriptingcallback:block/terminal",
+  "textures": {
+    "back": "integratedscriptingcallback:parts/terminal_back",
+    "front": "integratedscriptingcallback:parts/terminal_scripting"
+  }
+}
+
+

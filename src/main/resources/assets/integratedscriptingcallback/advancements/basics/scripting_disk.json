@@ -1,0 +1,28 @@
+{
+  "display": {
+    "icon": {
+      "item": "integratedscriptingcallback:scripting_disk",
+      "data": 0
+    },
+    "title": {
+      "translate": "advancement.integratedscripting.scripting_disk"
+    },
+    "description": {
+      "translate": "advancement.integratedscripting.scripting_disk.desc"
+    }
+  },
+  "parent": "integratedscriptingcallback:basics/mendesite",
+  "criteria": {
+    "criteria_0": {
+      "trigger": "cyclopscore:item_crafted",
+      "conditions": {
+        "items": [
+          {
+            "item": "integratedscriptingcallback:scripting_disk"
+          }
+        ]
+      }
+    }
+  }
+}
+

@@ -1,0 +1,8 @@
+{
+  "_comment": "Human-readable aliases for operators whose derived 1.12.2 script name differs from the documentation/information-book examples. The value is either an ID operator unique name (the 1.12 translation key) or a derived global name. Keys starting with an underscore are ignored.",
+  "itemstackStackable": "itemstackStackable",
+  "itemstackStrength": "itemstackStrength",
+  "blockIsPlantable": "blockIsplantable",
+  "itemstackSize": "itemstackSize",
+  "itemstackCanBurn": "itemstackCanburn"
+}
