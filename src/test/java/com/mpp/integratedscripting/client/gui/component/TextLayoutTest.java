@@ -3,6 +3,7 @@ package com.mpp.integratedscripting.client.gui.component;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -12,6 +13,24 @@ public class TextLayoutTest {
 
     /** Every character is 5 pixels wide, so wrapping is easy to reason about. */
     private static final TextLayout.IWidthProvider FIVE_PX = text -> text.length() * 5;
+
+    /** Fast provider: one glyph call per unique character, and no whole-string calls. */
+    private static final class CountingProvider implements TextLayout.ICharWidthProvider {
+        int charCalls;
+        int stringCalls;
+
+        @Override
+        public int getCharWidth(char c) {
+            charCalls++;
+            return 5;
+        }
+
+        @Override
+        public int getWidth(String text) {
+            stringCalls++;
+            return text.length() * 5;
+        }
+    }
 
     @Test
     public void testEmptyValueHasOneLine() {
@@ -140,6 +159,82 @@ public class TextLayoutTest {
             assertTrue(line.getStart() + line.getText().length() <= 13);
             assertTrue(line.getLineNumber() >= 1);
         }
+    }
+
+    // ---------------------------------------------------------------- fast / incremental layout
+
+    @Test
+    public void testFastProviderMatchesGenericWrapping() {
+        String value = "0123456789abcdef\nconst foo = 1;\n\nshort";
+        TextLayout generic = TextLayout.build(value, 50, FIVE_PX);
+        TextLayout fast = TextLayout.build(value, 50, new CountingProvider());
+
+        assertEquals(generic.getLineCount(), fast.getLineCount());
+        for (int i = 0; i < generic.getLineCount(); i++) {
+            assertEquals(generic.getLine(i).getText(), fast.getLine(i).getText());
+            assertEquals(generic.getLine(i).getStart(), fast.getLine(i).getStart());
+            assertEquals(generic.getLine(i).getLineNumber(), fast.getLine(i).getLineNumber());
+        }
+        for (int i = 0; i < generic.getLineCount(); i++) {
+            int pos = generic.getLine(i).getStart() + Math.min(3, generic.getLine(i).getText().length());
+            assertEquals(generic.getX(i, pos), fast.getX(i, pos));
+            assertEquals(generic.getCharIndexAt(i, 12), fast.getCharIndexAt(i, 12));
+        }
+    }
+
+    @Test
+    public void testFastProviderMeasuresGlyphsOnlyOnce() {
+        CountingProvider provider = new CountingProvider();
+        TextLayout layout = TextLayout.build("aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbb", 50, provider);
+        assertEquals(4, layout.getLineCount());
+        assertEquals(0, provider.stringCalls);
+        // Two unique characters, each measured once and then cached.
+        assertEquals(2, provider.charCalls);
+    }
+
+    @Test
+    public void testRebuildReusesUnchangedLines() {
+        StringBuilder value = new StringBuilder();
+        for (int line = 0; line < 10; line++) {
+            if (line > 0) {
+                value.append('\n');
+            }
+            for (int i = 0; i < 4; i++) {
+                value.append((char) (0x400 + line * 8 + i));
+            }
+        }
+        CountingProvider provider = new CountingProvider();
+        TextLayout first = TextLayout.build(value.toString(), 500, provider);
+        assertEquals(40, provider.charCalls);
+
+        provider.charCalls = 0;
+        StringBuilder changed = new StringBuilder(value);
+        int changedAt = changed.indexOf(String.valueOf((char) (0x400 + 5 * 8)));
+        changed.setCharAt(changedAt, 'Z');
+        TextLayout second = TextLayout.rebuild(first, changed.toString(), 500, provider);
+
+        assertEquals(first.getLineCount(), second.getLineCount());
+        // Only the edited line is re-measured; its four characters are new to
+        // this layout's glyph cache, so at most a handful of calls happen.
+        assertTrue("expected a small number of measurements, got " + provider.charCalls,
+                provider.charCalls <= 8);
+        assertEquals(0, provider.stringCalls);
+    }
+
+    @Test
+    public void testRebuildReturnsSameLayoutForSameValue() {
+        CountingProvider provider = new CountingProvider();
+        TextLayout first = TextLayout.build("abc", 500, provider);
+        TextLayout second = TextLayout.rebuild(first, "abc", 500, provider);
+        assertSame(first, second);
+    }
+
+    @Test
+    public void testWrappedLinesExposeLogicalLineStart() {
+        TextLayout layout = TextLayout.build("0123456789abcdef", 50, FIVE_PX);
+        assertEquals(2, layout.getLineCount());
+        assertEquals(0, layout.getLine(1).getLogicalLineStart());
+        assertEquals(10, layout.getLine(1).getStart());
     }
 
 }

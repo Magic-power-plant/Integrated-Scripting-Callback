@@ -810,7 +810,7 @@ public class ClientAcceptanceHarness {
     private void clickCreateFile(Minecraft mc) throws IOException {
         GuiTerminalScripting screen = (GuiTerminalScripting) mc.currentScreen;
         screen.mouseClicked(screen.getGuiLeftTotal() + GuiTerminalScripting.PATHS_X + 5,
-                screen.getGuiTopTotal() + 226, 0);
+                screen.getGuiTopTotal() + screen.getCreateFileButtonY() + 4, 0);
     }
 
     private void clickScriptRow(Minecraft mc, int row) throws IOException {

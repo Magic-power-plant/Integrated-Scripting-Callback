@@ -1,6 +1,8 @@
 package com.mpp.integratedscripting.client.gui.container;
 
 import com.mpp.IntegratedScriptingCallback;
+import com.mpp.integratedscripting.client.gui.component.input.CompletionPopupLayout;
+import com.mpp.integratedscripting.client.gui.component.input.GuiWidgetTextArea;
 import com.mpp.integratedscripting.inventory.container.ContainerTerminalScripting;
 import com.mpp.integratedscripting.part.PartTypes;
 import net.minecraft.client.Minecraft;
@@ -19,6 +21,7 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.cyclops.integrateddynamics.core.client.gui.ExtendedGuiHandler;
 import org.cyclops.integrateddynamics.core.helper.PartHelpers;
+import org.lwjgl.input.Keyboard;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -188,7 +191,7 @@ public class GuiSmokeHarness {
                     timeout(400, "second script creation");
                     return;
                 }
-                log("second script created; opening the removal dialog");
+                log("second script created; selecting it for the completion test");
                 nextPhase();
                 clickScriptRow(mc, 1);
                 return;
@@ -197,9 +200,59 @@ public class GuiSmokeHarness {
                     return;
                 }
                 nextPhase();
+                focusEditor(mc);
+                typeText(mc, "item.sta");
+                log("typed 'item.sta' into the second script");
+                return;
+            case 11: {
+                GuiWidgetTextArea editor = textArea(mc);
+                check(editor.isCompletionOpen(), "completion dropdown opened while typing");
+                int count = editor.getCompletionCandidateCount();
+                check(count > 0, "completion offers candidates (count=" + count + ")");
+                String selected = editor.getCompletionSelectedLabel();
+                check(selected != null && selected.startsWith("sta"),
+                        "a 'sta' method is selected (" + selected + ")");
+                drawSmoke(mc);
+                screenshot(mc, "m5-completion.png");
+
+                terminalScreen(mc).keyTyped('\r', Keyboard.KEY_RETURN);
+                check(selected != null && ("item." + selected).equals(editor.getValue()),
+                        "accepting replaced the typed prefix (" + editor.getValue() + ")");
+
+                // Escape must dismiss the dropdown and keep it closed for the rest
+                // of the word, instead of reopening on the next character.
+                editor.setValue("");
+                typeText(mc, "it");
+                check(editor.isCompletionOpen(), "typing two characters opens the dropdown");
+                terminalScreen(mc).keyTyped((char) 0, Keyboard.KEY_ESCAPE);
+                check(!editor.isCompletionOpen(), "Escape closes the dropdown");
+                typeText(mc, "e");
+                check(!editor.isCompletionOpen(), "Escape keeps the dropdown closed for the word");
+
+                // A click on a row accepts that row.
+                editor.setValue("");
+                typeText(mc, "sta");
+                check(editor.isCompletionOpen(), "the dropdown opens again in a new word");
+                drawSmoke(mc);
+                CompletionPopupLayout layout = editor.getCompletionPopupLayout();
+                check(layout != null, "the dropdown has a layout after drawing");
+                String first = editor.getCompletionSelectedLabel();
+                terminalScreen(mc).mouseClicked(layout.getX() + 10,
+                        layout.getY() + CompletionPopupLayout.PADDING_Y + 2, 0);
+                check(first != null && first.equals(editor.getValue()),
+                        "clicking a row accepted it (" + editor.getValue() + ")");
+                check(!editor.isCompletionOpen(), "the dropdown closed after accepting");
+                nextPhase();
+                return;
+            }
+            case 12:
+                if (this.phaseTicks < 10) {
+                    return;
+                }
+                nextPhase();
                 clickRemoveIcon(mc, 1);
                 return;
-            case 11:
+            case 13:
                 if (this.phaseTicks < 10) {
                     return;
                 }
@@ -209,7 +262,7 @@ public class GuiSmokeHarness {
                 log("removal dialog drawn; clicking 'Keep'");
                 clickDialogCancel(mc);
                 return;
-            case 12:
+            case 14:
                 if (this.phaseTicks < 10) {
                     return;
                 }
@@ -217,7 +270,7 @@ public class GuiSmokeHarness {
                 nextPhase();
                 clickRemoveIcon(mc, 1);
                 return;
-            case 13:
+            case 15:
                 if (this.phaseTicks < 10) {
                     return;
                 }
@@ -225,7 +278,7 @@ public class GuiSmokeHarness {
                 log("clicking 'Delete'");
                 clickDialogConfirm(mc);
                 return;
-            case 14:
+            case 16:
                 if (activeScriptCount(mc) != 1) {
                     timeout(400, "script deletion");
                     return;
@@ -237,7 +290,7 @@ public class GuiSmokeHarness {
                 nextPhase();
                 mc.displayGuiScreen(null);
                 return;
-            case 15:
+            case 17:
                 if (this.phaseTicks < 60) {
                     return;
                 }
@@ -245,7 +298,7 @@ public class GuiSmokeHarness {
                 nextPhase();
                 scheduleOpenDrive(mc);
                 return;
-            case 16:
+            case 18:
                 if (!(mc.currentScreen instanceof GuiScriptingDrive)) {
                     timeout(200, "drive screen");
                     return;
@@ -256,7 +309,7 @@ public class GuiSmokeHarness {
                 drawSmoke(mc);
                 nextPhase();
                 return;
-            case 17:
+            case 19:
                 if (this.phaseTicks == 10) {
                     drawSmoke(mc);
                     screenshot(mc, "m5-drive.png");
@@ -369,7 +422,7 @@ public class GuiSmokeHarness {
     private void clickCreateFile(Minecraft mc) throws java.io.IOException {
         GuiTerminalScripting screen = (GuiTerminalScripting) mc.currentScreen;
         screen.mouseClicked(screen.getGuiLeftTotal() + GuiTerminalScripting.PATHS_X + 5,
-                screen.getGuiTopTotal() + 226, 0);
+                screen.getGuiTopTotal() + screen.getCreateFileButtonY() + 4, 0);
     }
 
     private void clickScriptRow(Minecraft mc, int row) throws java.io.IOException {
@@ -387,13 +440,35 @@ public class GuiSmokeHarness {
 
     private void clickDialogConfirm(Minecraft mc) throws java.io.IOException {
         GuiTerminalScripting screen = (GuiTerminalScripting) mc.currentScreen;
-        // Dialog x = guiLeft + 128 - 216/2 = guiLeft + 20, y = guiTop + 50, buttons at +51.
-        screen.mouseClicked(screen.getGuiLeftTotal() + 80, screen.getGuiTopTotal() + 50 + 55, 0);
+        // Follow the dialog, which is centred in the (possibly expanded) GUI.
+        screen.mouseClicked(screen.getGuiLeftTotal() + screen.getDialogLeft() + 75,
+                screen.getGuiTopTotal() + screen.getDialogTop() + 55, 0);
     }
 
     private void clickDialogCancel(Minecraft mc) throws java.io.IOException {
         GuiTerminalScripting screen = (GuiTerminalScripting) mc.currentScreen;
-        screen.mouseClicked(screen.getGuiLeftTotal() + 150, screen.getGuiTopTotal() + 50 + 55, 0);
+        screen.mouseClicked(screen.getGuiLeftTotal() + screen.getDialogLeft() + 130,
+                screen.getGuiTopTotal() + screen.getDialogTop() + 55, 0);
+    }
+
+    private void focusEditor(Minecraft mc) throws java.io.IOException {
+        GuiTerminalScripting screen = terminalScreen(mc);
+        screen.mouseClicked(screen.getGuiLeftTotal() + 120, screen.getGuiTopTotal() + 40, 0);
+    }
+
+    private void typeText(Minecraft mc, String text) throws java.io.IOException {
+        GuiTerminalScripting screen = terminalScreen(mc);
+        for (char c : text.toCharArray()) {
+            screen.keyTyped(c, 0);
+        }
+    }
+
+    private static GuiTerminalScripting terminalScreen(Minecraft mc) {
+        return (GuiTerminalScripting) mc.currentScreen;
+    }
+
+    private static GuiWidgetTextArea textArea(Minecraft mc) {
+        return terminalScreen(mc).getTextArea();
     }
 
     private void typeIntoEditor(Minecraft mc) throws java.io.IOException {

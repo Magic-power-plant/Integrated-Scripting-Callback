@@ -1,24 +1,42 @@
 package com.mpp.integratedscripting.core.language;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import com.mpp.IntegratedScriptingCallback;
 import com.mpp.integratedscripting.api.language.ILanguageHandler;
 import com.mpp.integratedscripting.api.language.ILanguageHandlerRegistry;
+import com.mpp.integratedscripting.api.language.LanguageId;
+import com.mpp.integratedscripting.api.language.service.ILanguageServiceRegistry;
+import com.mpp.integratedscripting.api.language.service.ILanguageServices;
+import com.mpp.integratedscripting.api.language.service.IServerStartTask;
+import com.mpp.integratedscripting.api.language.service.LanguageContributorKeys;
+import com.mpp.integratedscripting.core.language.service.LanguageServiceRegistry;
+import com.mpp.integratedscripting.core.language.service.LegacyLanguageServices;
+import org.apache.logging.log4j.Level;
 
 import javax.annotation.Nullable;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Registry of language handlers, keyed by file extension.
+ * Registry of language handlers, keyed by file extension and by
+ * {@link LanguageId}.
+ *
+ * <p>Registering a handler also bridges the legacy capabilities it overrides into
+ * the {@link ILanguageServiceRegistry} (see {@link LegacyLanguageServices}), which
+ * is what lets the terminal editor depend on services only.</p>
  *
  * <p>The 1.20 reference implementation listens to the per-mod
  * {@code ServerStartedEvent}. 1.12.2 has a single global Forge event bus, so
- * {@code IntegratedScriptingCallback#onServerStarted} calls
- * {@link #onServerStarted()} explicitly instead of relying on a constructor
- * side effect (this also keeps the registry usable in plain unit tests).</p>
+ * {@link LanguageHandlers#onServerStarted()} runs the server-start tasks
+ * explicitly instead. This also keeps the registry usable in plain unit tests.</p>
  *
  * @author rubensworks
  */
@@ -26,44 +44,172 @@ public class LanguageHandlerRegistry implements ILanguageHandlerRegistry {
 
     private static final LanguageHandlerRegistry INSTANCE = new LanguageHandlerRegistry();
 
-    private final Map<String, ILanguageHandler> extensionToHandlerMap = Maps.newHashMap();
+    private final Map<String, ILanguageHandler> extensionToHandlerMap = new LinkedHashMap<>();
+    private final Map<LanguageId, ILanguageHandler> languageToHandlerMap = new LinkedHashMap<>();
+    private final List<String> conflicts = new ArrayList<>();
 
-    private LanguageHandlerRegistry() {
+    private ILanguageServiceRegistry services;
+
+    /**
+     * Create a registry that bridges into the game-wide service registry.
+     */
+    public LanguageHandlerRegistry() {
+        this(LanguageServiceRegistry.getInstance());
     }
 
     /**
-     * @return The unique instance.
+     * Create a registry that bridges into a specific service registry, for tests
+     * and for the composition root.
+     * @param services The service registry to register bridged services into.
+     */
+    public LanguageHandlerRegistry(ILanguageServiceRegistry services) {
+        this.services = services;
+    }
+
+    /**
+     * @return The unique game-wide instance; unit tests may construct their own.
      */
     public static LanguageHandlerRegistry getInstance() {
         return INSTANCE;
     }
 
-    @Override
-    public void register(ILanguageHandler translator) {
-        for (String extension : translator.getExtensions()) {
-            extensionToHandlerMap.put(extension, translator);
+    /**
+     * Point the legacy bridge at a service registry.
+     * @param services The service registry.
+     */
+    public synchronized void setServiceRegistry(ILanguageServiceRegistry services) {
+        this.services = services;
+        if (services instanceof LanguageServiceRegistry) {
+            ((LanguageServiceRegistry) services).attachHandlerRegistry(this);
         }
+    }
+
+    @Override
+    public synchronized void register(ILanguageHandler provider) {
+        if (provider == null) {
+            throw new IllegalArgumentException("A language handler must not be null.");
+        }
+        LanguageId language = provider.getLanguageId();
+
+        ILanguageHandler previous = this.languageToHandlerMap.put(language, provider);
+        if (previous != null && previous != provider) {
+            // The replacement handler owns the language now; drop the old
+            // handler's extensions so it cannot keep resolving files.
+            Iterator<Map.Entry<String, ILanguageHandler>> iterator =
+                    this.extensionToHandlerMap.entrySet().iterator();
+            while (iterator.hasNext()) {
+                if (iterator.next().getValue() == previous) {
+                    iterator.remove();
+                }
+            }
+            addConflict("The language id '" + language + "' is registered by both '"
+                    + previous.getName() + "' and '" + provider.getName()
+                    + "'; the last registration wins.");
+        }
+
+        List<String> extensions = provider.getExtensions();
+        if (extensions != null) {
+            for (String rawExtension : extensions) {
+                String extension = normalizeExtension(rawExtension);
+                if (extension == null) {
+                    continue;
+                }
+                ILanguageHandler existing = this.extensionToHandlerMap.put(extension, provider);
+                if (existing != null && existing != provider) {
+                    addConflict("The extension '." + extension + "' is registered by both '"
+                            + existing.getName() + "' and '" + provider.getName()
+                            + "'; the last registration wins.");
+                }
+            }
+        }
+
+        LegacyLanguageServices.bridge(this.services, language, provider);
     }
 
     @Nullable
     @Override
-    public ILanguageHandler getProvider(Path filePath) {
+    public synchronized ILanguageHandler getProvider(Path filePath) {
         String extension = getPathExtension(filePath);
         if (extension != null) {
-            return extensionToHandlerMap.get(extension);
+            return this.extensionToHandlerMap.get(extension);
         }
         return null;
     }
 
+    @Nullable
+    @Override
+    public synchronized ILanguageHandler getHandler(LanguageId language) {
+        return language == null ? null : this.languageToHandlerMap.get(language);
+    }
+
+    @Override
+    public synchronized Collection<ILanguageHandler> getHandlers() {
+        return Collections.unmodifiableCollection(
+                new LinkedHashSet<>(this.languageToHandlerMap.values()));
+    }
+
+    @Override
+    public synchronized Collection<LanguageId> getLanguages() {
+        return Collections.unmodifiableCollection(
+                new LinkedHashSet<>(this.languageToHandlerMap.keySet()));
+    }
+
+    @Nullable
+    @Override
+    public synchronized ILanguageHandler getDefaultHandler() {
+        Collection<ILanguageHandler> handlers = this.languageToHandlerMap.values();
+        return handlers.isEmpty() ? null : handlers.iterator().next();
+    }
+
+    @Override
+    public synchronized Collection<String> getConflicts() {
+        return Collections.unmodifiableList(new ArrayList<>(this.conflicts));
+    }
+
     /**
-     * Notify all registered language handlers that the server has started.
-     * Handlers are notified once, even if they are registered under several extensions.
+     * Run the server-start work of every registered language exactly once: the
+     * legacy {@code onServerStarted} hook (transition period only) and then every
+     * contributed {@link IServerStartTask}.
+     *
+     * <p>1.12.2 keeps this explicit instead of using a Forge event, so plain unit
+     * tests can call it.</p>
      */
-    public void onServerStarted() {
-        Set<ILanguageHandler> handlers = Sets.newLinkedHashSet(extensionToHandlerMap.values());
-        for (ILanguageHandler languageHandler : handlers) {
-            languageHandler.onServerStarted();
+    @SuppressWarnings("deprecation")
+    public synchronized void onServerStarted() {
+        Set<ILanguageHandler> handlers = new LinkedHashSet<>(this.languageToHandlerMap.values());
+        for (ILanguageHandler handler : handlers) {
+            handler.onServerStarted();
+            if (this.services == null) {
+                continue;
+            }
+            ILanguageServices languageServices = this.services.getServices(handler.getLanguageId());
+            for (IServerStartTask task : languageServices.getContributors(
+                    LanguageContributorKeys.SERVER_START_TASKS)) {
+                task.onServerStarted();
+            }
         }
+    }
+
+    private void addConflict(String message) {
+        this.conflicts.add(message);
+        IntegratedScriptingCallback.clog(Level.WARN, "Language registration conflict: " + message);
+    }
+
+    /**
+     * @param extension An extension, with or without a leading dot, in any case.
+     * @return The normalised lower-case extension without dot, or {@code null}
+     *         when it is empty.
+     */
+    @Nullable
+    public static String normalizeExtension(@Nullable String extension) {
+        if (extension == null) {
+            return null;
+        }
+        String value = extension.trim();
+        while (value.startsWith(".")) {
+            value = value.substring(1);
+        }
+        return value.isEmpty() ? null : value.toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -72,6 +218,9 @@ public class LanguageHandlerRegistry implements ILanguageHandlerRegistry {
      */
     @Nullable
     public static String getPathExtension(Path filePath) {
+        if (filePath == null) {
+            return null;
+        }
         Path fileName = filePath.getFileName();
         if (fileName == null) {
             return null;
@@ -81,14 +230,7 @@ public class LanguageHandlerRegistry implements ILanguageHandlerRegistry {
         if (dot < 0 || dot == name.length() - 1) {
             return null;
         }
-        return name.substring(dot + 1).toLowerCase(java.util.Locale.ROOT);
-    }
-
-    /**
-     * @return A snapshot of all registered handlers, for diagnostics.
-     */
-    public java.util.Collection<ILanguageHandler> getHandlers() {
-        return Lists.newArrayList(Sets.newLinkedHashSet(extensionToHandlerMap.values()));
+        return normalizeExtension(name.substring(dot + 1));
     }
 
 }

@@ -38,7 +38,7 @@
 
 本模组提供另一条路：**写代码**。
 
-- 在游戏内的**脚本终端**里编辑多个磁盘上的多个脚本文件，带语法高亮、自动保存
+- 在游戏内的**脚本终端**里编辑多个磁盘上的多个脚本文件，带语法高亮、自动缩进、括号补全、代码补全下拉框、撤销/重做、自动保存
 - 脚本里的 `const` / `let` 变量 → 绑定成**变量卡**（值）
 - 脚本里的函数 → 绑定成**运算符卡**（Operator），可以当过滤器、断言用
 - 动态联合的**全部值类型双向互通**：整数、长整数、浮点、布尔、字符串、列表、NBT、物品、方块、流体……
@@ -157,10 +157,26 @@ const myVar = 123;
 - **左上角磁盘选择器**：点箭头切换磁盘，也可以直接在里面输入磁盘 ID
 - **左下角「新建文件」**：在当前磁盘新建一个空脚本，文件名自动为 `script0.js`、`script1.js`……
 - **左侧列表**：点一下选中文件，右边就会显示内容；鼠标停在一行上时，行尾会出现**红色 ×**，点它弹出确认框，确认后删除文件
-- **右侧编辑器**：边写边自动保存（约每秒同步一次到服务端）；带行号、滚动条，支持 `Ctrl+A` / `Ctrl+C` / `Ctrl+V` / `Ctrl+X`，`Tab` 插入 4 个空格
+- **右侧编辑器**：边写边自动保存（约每秒同步一次到服务端）；带行号、滚动条、自动缩进、括号补全、代码补全下拉框、撤销/重做、当前行与配对括号高亮
 - **右下角槽位**：放**空的变量卡**，用来绑定当前选中的成员
 
 > 支持的脚本扩展名：`.js`、`.cjs`、`.mjs`。
+
+编辑器按 [CodeMirror](https://codemirror.net/) 的编辑模型实现（自动缩进、close-brackets、history、增量布局、补全下拉框），完整键位与设计说明见 [`docs/EDITOR.md`](docs/EDITOR.md)。
+
+| 按键 | 行为 |
+|---|---|
+| `Enter` | 换行并保持/增加缩进；在空的 `{}` 中间回车会展开成三行 |
+| `Tab` / `Shift+Tab` | 缩进到下一个制表位 / 整行反缩进 |
+| `(` `[` `{` `'` `"` | 自动补全成对符号；有选区时包裹选区；字符串/注释里不补全 |
+| `)` `]` `}` / 引号 | 右边已有同一符号时跳过；行首输入 `}` 会自动反缩进 |
+| 输入标识符 / `Ctrl+Space` / `.` | 输入第 2 个字符时自动弹出补全；`Ctrl+Space` 显式打开；`.` 打开对象方法候选 |
+| 补全中 | `↑`/`↓` 选择、`PageUp`/`PageDown` 翻页、`Enter`/`Tab`/鼠标点击插入、`Esc` 关闭 |
+| `Ctrl+/` | 切换行注释 |
+| `Ctrl+D` / `Ctrl+Shift+K` / `Alt+↑` `Alt+↓` | 复制行 / 删除行 / 上下移动行 |
+| `Ctrl+Z` / `Ctrl+Y`（或 `Ctrl+Shift+Z`） | 撤销 / 重做，连续输入合并成一步 |
+| `Home` / `Ctrl+Home` / `Ctrl+End` | 智能行首 / 文档开头 / 文档结尾 |
+| `Ctrl+A/C/V/X`、双击、三击 | 全选、复制、粘贴、剪切；选中单词、选中整行 |
 
 ## 怎么把脚本变成变量卡
 
@@ -469,7 +485,7 @@ saves/<世界名>/integratedscriptingcallback/
 - 只支持 **JavaScript**（`.js` / `.cjs` / `.mjs`）。TypeScript 只提供 `.d.ts` 给外部编辑器，游戏里不编译 TS。
 - 没有 Node.js 的 `require` / `fs` 等能力。
 - 脚本日志文件（`.stdout` / `.stderr`）目前也会出现在终端的文件列表里，选中它们会提示语言不支持 —— 已知的界面小问题。
-- 编辑器不做自动缩进/括号补全，只是纯文本编辑 + 高亮。
+- 编辑器不做语法检查、多光标或查找/替换面板；自动补全下拉框已支持（自动弹出、成员补全、鼠标点击、翻页），自动缩进按括号与上一行缩进推断，不解析 AST。
 - 纯客户端装本模组没有意义，逻辑全在服务端。
 
 ## 致谢与许可
@@ -482,7 +498,7 @@ saves/<世界名>/integratedscriptingcallback/
 
 本模组是**非官方**移植，与 CyclopsMC 无隶属关系；原版的问题请勿报到上游。
 
-> 开发者：构建方式、移植决策与验收记录在 [`docs/PORTING-1.12.2.md`](docs/PORTING-1.12.2.md)、[`docs/MILESTONES.md`](docs/MILESTONES.md)、[`docs/AUDIT.md`](docs/AUDIT.md)。
+> 开发者：构建方式、移植决策与验收记录在 [`docs/PORTING-1.12.2.md`](docs/PORTING-1.12.2.md)、[`docs/MILESTONES.md`](docs/MILESTONES.md)、[`docs/AUDIT.md`](docs/AUDIT.md)；编辑器的设计与键位见 [`docs/EDITOR.md`](docs/EDITOR.md)；给模组加语言/补全能力的接入指南见 [`docs/LANGUAGE-API.md`](docs/LANGUAGE-API.md)。
 
 ---
 
@@ -496,7 +512,10 @@ Write **JavaScript** inside your Integrated Dynamics network:
 - Craft **Mendesite** (drying basin: andesite + 1000 mB menril resin), then **Scripting Disks**,
   a **Scripting Drive** (exposes one disk to the network) and a **Scripting Terminal** (the in-game IDE).
 - Put a disk in a drive to give it a numeric **disk ID**; open the terminal on the same network to
-  create, edit and delete `.js` files on every exposed disk.
+  create, edit and delete `.js` files on every exposed disk. The in-game editor follows CodeMirror's
+  editing model: auto-indent, bracket/quote completion, undo/redo, line commands, matching-bracket
+  and active-line highlighting, plus stateful highlighting across multi-line comments and template
+  literals (see [`docs/EDITOR.md`](docs/EDITOR.md)).
 - Select a name in the editor (e.g. `const myVar = 123;`) and insert an **empty Variable Card** into
   the slot — the card now carries that constant, or, if you selected a function, an **Operator** card
   usable as a filter. All Integrated Dynamics value types, operators (`idContext.ops.*`) and object
@@ -512,5 +531,6 @@ starts but scripts report a missing JavaScript runtime. Install on **both** clie
 **Sandbox:** file I/O, processes, threads and native access are disabled by default; a statement
 limit (16384) guards against infinite loops. All serverside evaluation, no client-side scripting.
 
-Documentation for the port: [`docs/PORTING-1.12.2.md`](docs/PORTING-1.12.2.md). Licensed MIT;
+Documentation for the port: [`docs/PORTING-1.12.2.md`](docs/PORTING-1.12.2.md); the editor design,
+keymap and performance notes are in [`docs/EDITOR.md`](docs/EDITOR.md). Licensed MIT;
 GraalVM is UPL 1.0 (`LICENSE-graal.txt`).

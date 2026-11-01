@@ -192,4 +192,75 @@ public class TextFieldHelperExtendedTest {
         assertEquals(2, this.helper.getCursorPos());
     }
 
+    // ---------------------------------------------------------------- editor support
+
+    @Test
+    public void testApplyEditSetsValueCursorAndSelection() {
+        this.helper.setValue("abc");
+        this.helper.applyEdit("abcd", 4, 1);
+        assertEquals("abcd", this.helper.getValue());
+        assertEquals(4, this.helper.getCursorPos());
+        assertEquals(1, this.helper.getSelectionPos());
+        assertEquals("bcd", this.helper.getSelected());
+    }
+
+    @Test
+    public void testReplaceRangeMovesCaretToEnd() {
+        this.helper.setValue("abc");
+        this.helper.replaceRange(1, 2, "XY");
+        assertEquals("aXYc", this.helper.getValue());
+        assertEquals(3, this.helper.getCursorPos());
+        assertEquals(3, this.helper.getSelectionPos());
+    }
+
+    @Test
+    public void testEditListenerReportsChangedRange() {
+        final String[] reported = new String[1];
+        final int[] range = new int[2];
+        this.helper.setValue("abc");
+        this.helper.setEditListener((oldValue, oldCursor, oldSelection, newValue, newCursor,
+                                     newSelection, changeStart, changeEnd) -> {
+            reported[0] = oldValue + "->" + newValue;
+            range[0] = changeStart;
+            range[1] = changeEnd;
+        });
+
+        this.helper.setCursorPos(1, false);
+        this.helper.insertText("XY");
+        assertEquals("abc->aXYbc", reported[0]);
+        assertEquals(1, range[0]);
+        assertEquals(3, range[1]);
+    }
+
+    @Test
+    public void testEditListenerNotFiredForCursorMoves() {
+        final int[] calls = new int[1];
+        this.helper.setEditListener((oldValue, oldCursor, oldSelection, newValue, newCursor,
+                                     newSelection, changeStart, changeEnd) -> calls[0]++);
+        this.helper.setCursorPos(3, false);
+        this.helper.selectAll();
+        assertEquals(0, calls[0]);
+    }
+
+    @Test
+    public void testWordDeletionUsesCodeBoundaries() {
+        this.helper.setValue("foo.bar baz");
+        this.helper.setCursorPos(3, false);
+        this.helper.deleteWords(1);
+        assertEquals("foobar baz", this.helper.getValue());
+        assertEquals(3, this.helper.getCursorPos());
+    }
+
+    @Test
+    public void testWordMovementUsesCodeBoundaries() {
+        this.helper.setValue("foo.bar");
+        this.helper.setCursorPos(0, false);
+        this.helper.moveBy(1, false, true);
+        assertEquals(3, this.helper.getCursorPos());
+        this.helper.moveBy(1, false, true);
+        assertEquals(4, this.helper.getCursorPos());
+        this.helper.moveBy(1, false, true);
+        assertEquals(7, this.helper.getCursorPos());
+    }
+
 }

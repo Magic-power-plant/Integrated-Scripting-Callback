@@ -2,6 +2,7 @@ package com.mpp.integratedscripting.proxy;
 
 import com.mpp.IntegratedScriptingCallback;
 import com.mpp.integratedscripting.acceptance.HarnessLoader;
+import com.mpp.integratedscripting.client.language.ClientLanguageIcons;
 import com.mpp.integratedscripting.core.client.model.ScriptingVariableModelProviders;
 import org.cyclops.cyclopscore.init.ModBase;
 import org.cyclops.cyclopscore.proxy.ClientProxyComponent;
@@ -33,6 +34,9 @@ public class ClientProxy extends ClientProxyComponent {
         // M6: the script overlay must be registered before the model loader bakes
         // the variable card models (docs/PORTING-1.12.2.md §6.13).
         ScriptingVariableModelProviders.load();
+        // Language icons are client-only presentation data; the common API must not
+        // reference IImage (docs/LANGUAGE-API-REFACTOR.md §2.5).
+        ClientLanguageIcons.registerDefaults();
         // Development-only acceptance harnesses, each behind its own system property.
         HarnessLoader.registerIfEnabled(HarnessLoader.PROPERTY_GUI_SMOKE,
                 HarnessLoader.GUI_SMOKE_HARNESS);

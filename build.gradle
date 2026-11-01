@@ -103,10 +103,20 @@ tasks.named('jar') {
     // Decision M8 (docs/MILESTONES.md): the development-only acceptance harnesses
     // drive a real client/server and must not ship. Whatever needs them reaches
     // them reflectively through HarnessLoader, so excluding them here is safe.
-    exclude 'com/mpp/integratedscripting/acceptance/ServerAcceptance*.class'
-    exclude 'com/mpp/integratedscripting/client/gui/container/GuiSmokeHarness*.class'
-    exclude 'com/mpp/integratedscripting/client/gui/container/ResourceSmokeHarness*.class'
-    exclude 'com/mpp/integratedscripting/client/gui/container/ClientAcceptanceHarness*.class'
+    // A smoke run loads its own harness from this same dev jar (the FML mod class
+    // loader does not see build/classes), so include only that harness for its run.
+    if (!project.hasProperty('guiSmoke')) {
+        exclude 'com/mpp/integratedscripting/client/gui/container/GuiSmokeHarness*.class'
+    }
+    if (!project.hasProperty('resourceSmoke')) {
+        exclude 'com/mpp/integratedscripting/client/gui/container/ResourceSmokeHarness*.class'
+    }
+    if (!project.hasProperty('m7Gui')) {
+        exclude 'com/mpp/integratedscripting/client/gui/container/ClientAcceptanceHarness*.class'
+    }
+    if (!project.hasProperty('m7Smoke')) {
+        exclude 'com/mpp/integratedscripting/acceptance/ServerAcceptance*.class'
+    }
     manifest.attributes(
             'MixinConfigs'                 : mixinConfig,
             'FMLCorePluginContainsFMLMod'  : 'false'

@@ -23,6 +23,27 @@ import java.util.function.Consumer;
  */
 public class TextFieldHelperExtended {
 
+    /**
+     * Observer for completed value changes, used by the editor to build its undo
+     * history (CodeMirror records transactions rather than individual keystrokes).
+     */
+    public interface IEditListener {
+        /**
+         * Called after a mutation that changed the value.
+         * @param oldValue The value before the edit.
+         * @param oldCursor The caret before the edit.
+         * @param oldSelection The selection anchor before the edit.
+         * @param newValue The value after the edit.
+         * @param newCursor The caret after the edit.
+         * @param newSelection The selection anchor after the edit.
+         * @param changeStart Index of the first changed character.
+         * @param changeEnd Index in the new value where the changed region ends.
+         */
+        void onEdited(String oldValue, int oldCursor, int oldSelection,
+                      String newValue, int newCursor, int newSelection,
+                      int changeStart, int changeEnd);
+    }
+
     private final Consumer<String> onValueChange;
     private final Consumer<String> onSelectionChange;
     private final Consumer<Integer> onCursorChange;
@@ -30,6 +51,8 @@ public class TextFieldHelperExtended {
     private String value = "";
     private int cursorPos;
     private int selectionPos;
+    @Nullable
+    private IEditListener editListener;
 
     /**
      * @param onValueChange Called when the text content changed (may be null).
@@ -46,6 +69,10 @@ public class TextFieldHelperExtended {
 
     // ---------------------------------------------------------------- value
 
+    public void setEditListener(@Nullable IEditListener editListener) {
+        this.editListener = editListener;
+    }
+
     public String getValue() {
         return value;
     }
@@ -56,6 +83,33 @@ public class TextFieldHelperExtended {
      */
     public void setValuePassive(String valueNew) {
         mutate(() -> this.value = valueNew == null ? "" : valueNew);
+    }
+
+    /**
+     * Replace the value and the whole selection in one step, used to apply an
+     * {@link EditorEdit} without firing two separate notifications.
+     */
+    public void applyEdit(String newValue, int cursorNew, int selectionNew) {
+        mutate(() -> {
+            this.value = newValue == null ? "" : newValue;
+            this.cursorPos = cursorNew;
+            this.selectionPos = selectionNew;
+        });
+    }
+
+    /**
+     * Replace a character range, moving the caret to the end of the inserted
+     * text.
+     */
+    public void replaceRange(int start, int end, @Nullable String text) {
+        mutate(() -> {
+            int from = clamp(Math.min(start, end), 0, this.value.length());
+            int to = clamp(Math.max(start, end), 0, this.value.length());
+            String insert = text == null ? "" : text;
+            this.value = this.value.substring(0, from) + insert + this.value.substring(to);
+            this.cursorPos = from + insert.length();
+            this.selectionPos = this.cursorPos;
+        });
     }
 
     /**
@@ -131,7 +185,9 @@ public class TextFieldHelperExtended {
         mutate(() -> {
             int from = select ? this.selectionPos : this.cursorPos;
             if (word) {
-                this.cursorPos = getNthWordFromPos(direction, from);
+                this.cursorPos = direction < 0
+                        ? EditorInputRules.findWordStart(this.value, from)
+                        : EditorInputRules.findWordEnd(this.value, from);
             } else {
                 this.cursorPos = clamp(from + direction, 0, value.length());
             }
@@ -182,6 +238,8 @@ public class TextFieldHelperExtended {
 
     /**
      * Delete one word in the given direction, or the selection if there is one.
+     * Word boundaries follow JavaScript identifiers and punctuation runs, like
+     * CodeMirror's {@code deleteByGroup} with a word group.
      */
     public void deleteWords(int direction) {
         mutate(() -> {
@@ -189,7 +247,9 @@ public class TextFieldHelperExtended {
                 deleteSelection();
                 return;
             }
-            int target = getNthWordFromPos(direction, this.cursorPos);
+            int target = direction < 0
+                    ? EditorInputRules.findWordStart(this.value, this.cursorPos)
+                    : EditorInputRules.findWordEnd(this.value, this.cursorPos);
             if (target == this.cursorPos) {
                 return;
             }
@@ -277,13 +337,23 @@ public class TextFieldHelperExtended {
         String oldValue = this.value;
         String oldSelected = getSelected();
         int oldCursor = this.cursorPos;
+        int oldSelection = this.selectionPos;
 
         edit.run();
         this.cursorPos = clamp(this.cursorPos, 0, this.value.length());
         this.selectionPos = clamp(this.selectionPos, 0, this.value.length());
 
-        if (!oldValue.equals(this.value) && this.onValueChange != null) {
-            this.onValueChange.accept(this.value);
+        if (!oldValue.equals(this.value)) {
+            if (this.editListener != null) {
+                int changeStart = commonPrefixLength(oldValue, this.value);
+                int changeEnd = this.value.length() - commonSuffixLength(oldValue, this.value, changeStart);
+                this.editListener.onEdited(oldValue, oldCursor, oldSelection,
+                        this.value, this.cursorPos, this.selectionPos,
+                        changeStart, Math.max(changeStart, changeEnd));
+            }
+            if (this.onValueChange != null) {
+                this.onValueChange.accept(this.value);
+            }
         }
         if (!oldSelected.equals(getSelected()) && this.onSelectionChange != null) {
             this.onSelectionChange.accept(getSelected());
@@ -291,6 +361,26 @@ public class TextFieldHelperExtended {
         if (oldCursor != this.cursorPos && this.onCursorChange != null) {
             this.onCursorChange.accept(this.cursorPos);
         }
+    }
+
+    private static int commonPrefixLength(String first, String second) {
+        int max = Math.min(first.length(), second.length());
+        int i = 0;
+        while (i < max && first.charAt(i) == second.charAt(i)) {
+            i++;
+        }
+        return i;
+    }
+
+    private static int commonSuffixLength(String first, String second, int fromStart) {
+        int i = 0;
+        int firstEnd = first.length();
+        int secondEnd = second.length();
+        while (firstEnd - i > fromStart && secondEnd - i > fromStart
+                && first.charAt(firstEnd - 1 - i) == second.charAt(secondEnd - 1 - i)) {
+            i++;
+        }
+        return i;
     }
 
     private static int clamp(int value, int min, int max) {

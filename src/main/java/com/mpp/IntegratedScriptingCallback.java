@@ -34,6 +34,7 @@ import org.cyclops.integrateddynamics.infobook.OnTheDynamicsOfIntegrationBook;
 import com.mpp.integratedscripting.acceptance.HarnessLoader;
 import com.mpp.integratedscripting.api.evaluate.translation.IValueTranslatorRegistry;
 import com.mpp.integratedscripting.api.language.ILanguageHandlerRegistry;
+import com.mpp.integratedscripting.api.language.service.ILanguageServiceRegistry;
 import com.mpp.integratedscripting.block.BlockMendesiteConfig;
 import com.mpp.integratedscripting.block.BlockScriptingDriveConfig;
 import com.mpp.integratedscripting.capability.ScriptingNetworkCapabilityConstructors;
@@ -43,7 +44,6 @@ import com.mpp.integratedscripting.callback.ScriptErrorTracker;
 import com.mpp.integratedscripting.command.CommandTestFacade;
 import com.mpp.integratedscripting.command.CommandTestScript;
 import com.mpp.integratedscripting.core.evaluate.ScriptVariableFacadeHandler;
-import com.mpp.integratedscripting.core.language.LanguageHandlerRegistry;
 import com.mpp.integratedscripting.core.language.LanguageHandlers;
 import com.mpp.integratedscripting.core.network.ScriptingData;
 import com.mpp.integratedscripting.core.recipe.ScriptingRecipeHandler;
@@ -100,7 +100,10 @@ public class IntegratedScriptingCallback extends ModBaseVersionable {
     @Override
     public void preInit(FMLPreInitializationEvent event) {
         // 1) Mod-owned registries, must be known before the Cyclops config handler runs.
-        getRegistryManager().addRegistry(ILanguageHandlerRegistry.class, LanguageHandlerRegistry.getInstance());
+        //    The language registries are reached through LanguageHandlers, the same
+        //    convenience entry third-party mods use (docs/LANGUAGE-API-REFACTOR.md §4.7).
+        getRegistryManager().addRegistry(ILanguageHandlerRegistry.class, LanguageHandlers.REGISTRY);
+        getRegistryManager().addRegistry(ILanguageServiceRegistry.class, LanguageHandlers.SERVICES);
         getRegistryManager().addRegistry(IValueTranslatorRegistry.class, ValueTranslatorRegistry.getInstance());
 
         // 2) M4: register the script variable facade in Integrated Dynamics' handler registry.
@@ -198,9 +201,11 @@ public class IntegratedScriptingCallback extends ModBaseVersionable {
         this.scriptingData = new ScriptingData(world.getSaveHandler().getWorldDirectory());
 
         // M3: generate <world>/integratedscriptingcallback/integratedscriptingcallback.d.ts
-        // and the operator-bindings.log diagnostics.
+        // and the operator-bindings.log diagnostics. The typings are a contributed
+        // server-start task of the JavaScript language now, and the lifecycle entry
+        // is the language layer itself, not a registry singleton.
         OperatorBindings.dumpBindings(this.scriptingData.getRootPath());
-        LanguageHandlerRegistry.getInstance().onServerStarted();
+        LanguageHandlers.onServerStarted();
     }
 
     @Mod.EventHandler

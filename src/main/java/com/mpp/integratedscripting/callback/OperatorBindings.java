@@ -153,6 +153,19 @@ public final class OperatorBindings {
     }
 
     /**
+     * @return The union of every scoped method name, for completion when the
+     *         value type of the receiver is not known.
+     */
+    public static Set<String> getAllMethodNames() {
+        load();
+        Set<String> names = new LinkedHashSet<>();
+        for (Map<String, IOperator> methods : SCOPED.values()) {
+            names.addAll(methods.keySet());
+        }
+        return Collections.unmodifiableSet(names);
+    }
+
+    /**
      * @param translationKey An operator translation key.
      * @return The derived global script name, before sanitizing.
      */

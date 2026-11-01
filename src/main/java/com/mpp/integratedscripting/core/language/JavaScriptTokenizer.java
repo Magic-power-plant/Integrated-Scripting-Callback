@@ -1,149 +1,210 @@
 package com.mpp.integratedscripting.core.language;
 
-import com.google.common.collect.Lists;
+import com.mpp.integratedscripting.api.language.highlight.HighlightState;
+import com.mpp.integratedscripting.api.language.highlight.Token;
+import com.mpp.integratedscripting.api.language.highlight.TokenType;
 import com.mpp.integratedscripting.callback.TextStyle;
 import net.minecraft.util.text.TextFormatting;
 import org.apache.commons.lang3.tuple.Pair;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 /**
- * Minimal line-based tokenizer for JavaScript syntax highlighting.
+ * 1.12.2 compatibility facade over {@link JavaScriptLexer}.
  *
- * <p>The 1.20 reference implementation splits every line on a fixed list of
- * tokens (docs/PORTING-1.12.2.md §7.9.3). That never colours comments, string
- * literals or numbers, while §11.2 item 13 asks for exactly those classes. This
- * tokenizer performs a single left-to-right scan, so the fixed tokens are only
- * matched outside of comments and string literals.</p>
+ * <p>The 1.12.2 terminal colours code with the 16 {@link TextFormatting}
+ * constants instead of RGB styles (docs/PORTING-1.12.2.md §7.9.3), so the
+ * original tokenizer returned {@code Pair<TextFormatting, String>} segments. The
+ * language service layer now uses semantic {@link TokenType}s, and this class
+ * keeps the old signatures working by converting the lexer's tokens back to
+ * styled segments.</p>
  *
- * <p>It is deliberately line-based and stateless: a block comment that starts on
- * one line is coloured until the end of that line, and the rest of the block
- * comment is not remembered for the following lines. This is a display-only
- * limitation shared with the reference implementation (it has no lexer state
- * either), see the M5 notes in docs/MILESTONES.md.</p>
+ * <p>New code should use {@link JavaScriptHighlightService} (or any
+ * {@code IHighlightService}) instead of calling this class.</p>
  *
  * @author rubensworks
  */
 public final class JavaScriptTokenizer {
 
-    public static final Set<String> KEYWORDS = Collections.unmodifiableSet(new java.util.HashSet<>(
-            java.util.Arrays.asList(
-                    "const", "delete", "let", "var", "function", "return", "true", "false",
-                    "null", "undefined", "if", "else", "for", "while", "new", "typeof")));
+    /** Reserved words that get the keyword style. */
+    public static final Set<String> KEYWORDS = JavaScriptLexer.KEYWORDS;
 
-    public static final String SYMBOLS = "{}()[]=;.";
+    /** Characters that get the symbol style. */
+    public static final String SYMBOLS = JavaScriptLexer.SYMBOLS;
+
+    /**
+     * Lexer state carried from the end of one line into the next; mirrors
+     * {@link JavaScriptLexer.State}.
+     */
+    public enum State {
+        /** Ordinary code. */
+        CODE,
+        /** Inside a block comment. */
+        BLOCK_COMMENT,
+        /** Inside a template literal. */
+        TEMPLATE_STRING
+    }
+
+    /**
+     * The result of tokenizing one line: its styled segments and the state the
+     * next line starts in.
+     */
+    public static final class LineTokens {
+        private final List<Pair<TextFormatting, String>> segments;
+        private final State endState;
+
+        public LineTokens(List<Pair<TextFormatting, String>> segments, State endState) {
+            this.segments = Collections.unmodifiableList(segments);
+            this.endState = endState;
+        }
+
+        public List<Pair<TextFormatting, String>> getSegments() {
+            return segments;
+        }
+
+        public State getEndState() {
+            return endState;
+        }
+
+    }
 
     private JavaScriptTokenizer() {
     }
 
     /**
-     * Split one line into styled segments. Adjacent segments with the same style
-     * are merged, and segment contents always concatenate back to the input.
+     * Stateless single-line tokenization, for callers that only have one line.
      * @param line The line to tokenize, without newline characters.
      * @return The styled segments; empty for an empty line.
      */
     public static List<Pair<TextFormatting, String>> tokenize(String line) {
-        List<Pair<TextFormatting, String>> segments = Lists.newArrayList();
-        if (line == null || line.isEmpty()) {
-            return segments;
+        return tokenizeLine(line, State.CODE).getSegments();
+    }
+
+    /**
+     * Tokenize one line, continuing from a lexer state.
+     * @param line The line to tokenize, without newline characters.
+     * @param start The state at the start of the line; {@code null} means {@link State#CODE}.
+     * @return The styled segments and the state at the end of the line.
+     */
+    public static LineTokens tokenizeLine(@Nullable String line, @Nullable State start) {
+        String text = line == null ? "" : line;
+        com.mpp.integratedscripting.api.language.highlight.LineTokens tokens =
+                JavaScriptLexer.tokenize(text, toLexerState(start));
+        return new LineTokens(toSegments(tokens.getTokens(), text), toFacadeState(tokens.getEndState()));
+    }
+
+    /**
+     * Highlight a complete document in one pass, carrying state across lines.
+     * @param value The complete editor value.
+     * @return One segment list per logical line.
+     */
+    public static List<List<Pair<TextFormatting, String>>> tokenizeDocument(@Nullable String value) {
+        String text = value == null ? "" : value;
+        List<List<Pair<TextFormatting, String>>> lines = new ArrayList<>();
+        State state = State.CODE;
+        int pos = 0;
+        while (true) {
+            int newline = text.indexOf('\n', pos);
+            int end = newline < 0 ? text.length() : newline;
+            LineTokens tokens = tokenizeLine(text.substring(pos, end), state);
+            lines.add(tokens.getSegments());
+            state = tokens.getEndState();
+            if (newline < 0) {
+                break;
+            }
+            pos = newline + 1;
         }
+        return lines;
+    }
 
-        int i = 0;
-        int length = line.length();
-        while (i < length) {
-            char c = line.charAt(i);
+    /**
+     * The lexical context of a document position, used by the editor's input
+     * rules.
+     * @param value The complete document.
+     * @param position A character index in {@code value}.
+     * @return {@code LexicalContext#CODE}, {@code #STRING} or {@code #COMMENT}.
+     */
+    public static int lexicalContextAt(@Nullable String value, int position) {
+        return JavaScriptLexer.lexicalContextAt(value, position);
+    }
 
-            // Line or block comment (a block comment is coloured until the end of this line).
-            if (c == '/' && i + 1 < length) {
-                char next = line.charAt(i + 1);
-                if (next == '/') {
-                    add(segments, TextStyle.COMMENT, line.substring(i));
-                    break;
-                }
-                if (next == '*') {
-                    int end = line.indexOf("*/", i + 2);
-                    end = end < 0 ? length : end + 2;
-                    add(segments, TextStyle.COMMENT, line.substring(i, end));
-                    i = end;
+    /**
+     * @param type A semantic token type.
+     * @return The 1.12.2 formatting style used to draw it.
+     */
+    public static TextFormatting styleOf(TokenType type) {
+        if (type == null) {
+            return TextStyle.DEFAULT;
+        }
+        switch (type) {
+            case KEYWORD:
+                return TextStyle.KEYWORD;
+            case COMMENT:
+                return TextStyle.COMMENT;
+            case STRING:
+            case NUMBER:
+                return TextStyle.CONSTANT;
+            case PROPERTY:
+                return TextStyle.ATTRIBUTE;
+            case SYMBOL:
+            case OPERATOR:
+            case PUNCTUATION:
+                return TextStyle.SYMBOL;
+            default:
+                return TextStyle.DEFAULT;
+        }
+    }
+
+    private static List<Pair<TextFormatting, String>> toSegments(List<Token> tokens, String line) {
+        List<Pair<TextFormatting, String>> segments = new ArrayList<>();
+        for (Token token : tokens) {
+            TextFormatting style = styleOf(token.getType());
+            int start = Math.min(token.getStart(), line.length());
+            int end = Math.min(token.getEnd(), line.length());
+            if (end <= start) {
+                continue;
+            }
+            String text = line.substring(start, end);
+            if (!segments.isEmpty()) {
+                Pair<TextFormatting, String> last = segments.get(segments.size() - 1);
+                if (last.getLeft() == style) {
+                    segments.set(segments.size() - 1, Pair.of(style, last.getRight() + text));
                     continue;
                 }
             }
-
-            // String literal (single, double and template quotes).
-            if (c == '"' || c == '\'' || c == '`') {
-                int end = findStringEnd(line, i);
-                add(segments, TextStyle.CONSTANT, line.substring(i, end));
-                i = end;
-                continue;
-            }
-
-            // Numeric literal.
-            if (Character.isDigit(c)) {
-                int end = i;
-                while (end < length && isNumberChar(line.charAt(end))) {
-                    end++;
-                }
-                add(segments, TextStyle.CONSTANT, line.substring(i, end));
-                i = end;
-                continue;
-            }
-
-            // Identifier or keyword.
-            if (Character.isJavaIdentifierStart(c)) {
-                int end = i;
-                while (end < length && Character.isJavaIdentifierPart(line.charAt(end))) {
-                    end++;
-                }
-                String word = line.substring(i, end);
-                add(segments, KEYWORDS.contains(word) ? TextStyle.KEYWORD : TextStyle.DEFAULT, word);
-                i = end;
-                continue;
-            }
-
-            // Symbols and everything else.
-            add(segments, SYMBOLS.indexOf(c) >= 0 ? TextStyle.SYMBOL : TextStyle.DEFAULT,
-                    String.valueOf(c));
-            i++;
+            segments.add(Pair.of(style, text));
         }
         return segments;
     }
 
-    private static int findStringEnd(String line, int start) {
-        char quote = line.charAt(start);
-        int i = start + 1;
-        while (i < line.length()) {
-            char c = line.charAt(i);
-            if (c == '\\') {
-                i += 2;
-                continue;
-            }
-            if (c == quote) {
-                return i + 1;
-            }
-            i++;
+    private static JavaScriptLexer.State toLexerState(@Nullable State state) {
+        if (state == null) {
+            return JavaScriptLexer.State.CODE;
         }
-        return line.length();
+        switch (state) {
+            case BLOCK_COMMENT:
+                return JavaScriptLexer.State.BLOCK_COMMENT;
+            case TEMPLATE_STRING:
+                return JavaScriptLexer.State.TEMPLATE_STRING;
+            default:
+                return JavaScriptLexer.State.CODE;
+        }
     }
 
-    private static boolean isNumberChar(char c) {
-        return Character.isDigit(c) || c == '.' || c == 'x' || c == 'X' || c == 'e' || c == 'E'
-                || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
-    }
-
-    private static void add(List<Pair<TextFormatting, String>> segments, TextFormatting style, String text) {
-        if (text.isEmpty()) {
-            return;
+    private static State toFacadeState(@Nullable HighlightState state) {
+        JavaScriptLexer.State lexerState = JavaScriptLexer.stateOf(state);
+        switch (lexerState) {
+            case BLOCK_COMMENT:
+                return State.BLOCK_COMMENT;
+            case TEMPLATE_STRING:
+                return State.TEMPLATE_STRING;
+            default:
+                return State.CODE;
         }
-        if (!segments.isEmpty()) {
-            Pair<TextFormatting, String> last = segments.get(segments.size() - 1);
-            if (last.getLeft() == style) {
-                segments.set(segments.size() - 1, Pair.of(style, last.getRight() + text));
-                return;
-            }
-        }
-        segments.add(Pair.of(style, text));
     }
 
 }

@@ -29,10 +29,13 @@ import org.cyclops.integrateddynamics.core.inventory.container.slot.SlotVariable
 import org.cyclops.integrateddynamics.core.part.PartStateEmpty;
 import com.mpp.IntegratedScriptingCallback;
 import com.mpp.integratedscripting.api.item.IScriptVariableFacade;
+import com.mpp.integratedscripting.api.language.edit.IIdentifierSyntax;
+import com.mpp.integratedscripting.api.language.service.LanguageServiceKeys;
 import com.mpp.integratedscripting.api.network.IScriptingData;
 import com.mpp.integratedscripting.api.network.IScriptingNetwork;
 import com.mpp.integratedscripting.core.evaluate.ScriptVariableFacadeHandler;
 import com.mpp.integratedscripting.core.item.ScriptVariableFacade;
+import com.mpp.integratedscripting.core.language.LanguageHandlers;
 import com.mpp.integratedscripting.core.network.DiskListCodec;
 import com.mpp.integratedscripting.core.network.ScriptingNetworkHelpers;
 import com.mpp.integratedscripting.network.packet.TerminalScriptingCreateNewScriptPacket;
@@ -48,7 +51,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * Container for the scripting terminal GUI.
@@ -79,9 +81,6 @@ public class ContainerTerminalScripting
         extends ContainerMultipart<PartTypeTerminalScripting, PartStateEmpty<PartTypeTerminalScripting>>
         implements IDirtyMarkListener {
 
-    public static final Pattern INVALID_MEMBER_NAME = Pattern.compile("[^0-9a-zA-Z_]");
-    public static final Pattern VALID_MEMBER_NAME = Pattern.compile("[0-9a-zA-Z_]+");
-
     private final SimpleInventory inventory;
     private final IScriptingNetwork scriptingNetwork;
     private final int activeDiskId;
@@ -93,6 +92,12 @@ public class ContainerTerminalScripting
 
     private IntList availableDisks;
     private boolean availableDisksSynced;
+
+    /** The active file's identifier rule, cached because it is read while drawing. */
+    @Nullable
+    private Path cachedIdentifierSyntaxPath;
+    @Nullable
+    private IIdentifierSyntax cachedIdentifierSyntax;
 
     public ContainerTerminalScripting(EntityPlayer player, PartTarget target,
                                       IPartContainer partContainer, PartTypeTerminalScripting partType) {
@@ -329,12 +334,14 @@ public class ContainerTerminalScripting
             return;
         }
 
-        // Determine unique script name
+        // Determine unique script name. The extension comes from the default
+        // language's edit support instead of being hard-coded to `.js`.
+        String extension = LanguageHandlers.getDefaultFileExtension();
         Set<Path> existingScripts = scriptingData.getScripts(disk).keySet();
         Path path;
         int i = 0;
         do {
-            path = Paths.get("script" + i++ + ".js");
+            path = Paths.get("script" + i++ + "." + extension);
         } while (existingScripts.contains(path));
 
         // Create empty script
@@ -382,7 +389,27 @@ public class ContainerTerminalScripting
     }
 
     public boolean isMemberSelected() {
-        return VALID_MEMBER_NAME.matcher(getSelectedMember()).matches();
+        // What counts as a valid member name is language data now: JavaScript for
+        // example accepts `$` and Unicode identifiers, which the old
+        // `[0-9a-zA-Z_]+` pattern rejected (docs/LANGUAGE-API-REFACTOR.md §1).
+        // The rule is cached per active file: this is called on the render path.
+        return identifierSyntax().isValidMemberName(getSelectedMember());
+    }
+
+    /**
+     * @return The identifier rule of the active script's language, resolved once
+     *         per selected file.
+     */
+    private IIdentifierSyntax identifierSyntax() {
+        Path path = getActiveScriptPath();
+        if (this.cachedIdentifierSyntax == null
+                || !Objects.equals(this.cachedIdentifierSyntaxPath, path)) {
+            this.cachedIdentifierSyntaxPath = path;
+            this.cachedIdentifierSyntax = LanguageHandlers.getServices(path)
+                    .get(LanguageServiceKeys.EDIT)
+                    .getIdentifierSyntax();
+        }
+        return this.cachedIdentifierSyntax;
     }
 
     @Nullable
