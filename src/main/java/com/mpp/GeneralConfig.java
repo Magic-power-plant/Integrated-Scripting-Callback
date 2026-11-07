@@ -25,6 +25,10 @@ public class GeneralConfig extends DummyConfig {
     public static int scriptingDriveBaseConsumption = 2;
 
     @ConfigurableProperty(category = ConfigurableTypeCategory.GENERAL,
+            comment = "The base energy usage for the addressed memory.", minimalValue = 0)
+    public static int addressedMemoryBaseConsumption = 2;
+
+    @ConfigurableProperty(category = ConfigurableTypeCategory.GENERAL,
             comment = "The base energy usage for the scripting terminal.", minimalValue = 0)
     public static int terminalScriptingBaseConsumption = 1;
 
@@ -147,6 +151,26 @@ public class GeneralConfig extends DummyConfig {
     @ConfigurableProperty(category = ConfigurableTypeCategory.GENERAL,
             comment = "Wrap non-compound NBT arguments as {\"value\": <tag>} instead of failing.")
     public static boolean nbtScalarWrapper = false;
+
+    /**
+     * TypeScript support, see docs/TYPESCRIPT-TRANSLANGUAGE.md.
+     *
+     * <p>Turning it off stops {@code .ts} from being registered at all, so the
+     * files fall back to plain text and evaluating one reports "unsupported
+     * language". JavaScript is unaffected either way.</p>
+     */
+    @ConfigurableProperty(category = ConfigurableTypeCategory.GENERAL,
+            comment = "If .ts scripts are compiled to JavaScript and executed. "
+                    + "Turning this off leaves TypeScript files as plain text.",
+            requiresMcRestart = true)
+    public static boolean typescriptEnabled = true;
+
+    @ConfigurableProperty(category = ConfigurableTypeCategory.GENERAL,
+            comment = "The maximum number of characters in one .ts script. Larger scripts are "
+                    + "rejected with a readable error instead of stalling the server tick. "
+                    + "Set to -1 for the built-in 256 KiB limit.",
+            minimalValue = -1)
+    public static int typescriptMaxSourceLength = 256 * 1024;
 
     public GeneralConfig() {
         super(IntegratedScriptingCallback._instance, true, "general",

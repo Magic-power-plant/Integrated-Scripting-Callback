@@ -34,8 +34,10 @@ import org.cyclops.integrateddynamics.infobook.OnTheDynamicsOfIntegrationBook;
 import com.mpp.integratedscripting.acceptance.HarnessLoader;
 import com.mpp.integratedscripting.api.evaluate.translation.IValueTranslatorRegistry;
 import com.mpp.integratedscripting.api.language.ILanguageHandlerRegistry;
+import com.mpp.integratedscripting.api.language.LanguageId;
 import com.mpp.integratedscripting.api.language.service.ILanguageServiceRegistry;
 import com.mpp.integratedscripting.block.BlockMendesiteConfig;
+import com.mpp.integratedscripting.block.BlockAddressedMemoryConfig;
 import com.mpp.integratedscripting.block.BlockScriptingDriveConfig;
 import com.mpp.integratedscripting.capability.ScriptingNetworkCapabilityConstructors;
 import com.mpp.integratedscripting.capability.network.ScriptingNetworkConfig;
@@ -44,6 +46,8 @@ import com.mpp.integratedscripting.callback.ScriptErrorTracker;
 import com.mpp.integratedscripting.command.CommandTestFacade;
 import com.mpp.integratedscripting.command.CommandTestScript;
 import com.mpp.integratedscripting.core.evaluate.ScriptVariableFacadeHandler;
+import com.mpp.integratedscripting.core.evaluate.operator.AddressedMemoryOperators;
+import com.mpp.integratedscripting.core.evaluate.value.AddressedMemoryValues;
 import com.mpp.integratedscripting.core.language.LanguageHandlers;
 import com.mpp.integratedscripting.core.network.ScriptingData;
 import com.mpp.integratedscripting.core.recipe.ScriptingRecipeHandler;
@@ -52,6 +56,7 @@ import com.mpp.integratedscripting.evaluate.ScriptRuntime;
 import com.mpp.integratedscripting.evaluate.translation.ValueTranslatorRegistry;
 import com.mpp.integratedscripting.evaluate.translation.ValueTranslators;
 import com.mpp.integratedscripting.infobook.TextfieldAppendix;
+import com.mpp.integratedscripting.item.ItemRefresherConfig;
 import com.mpp.integratedscripting.item.ItemScriptingDiskConfig;
 import com.mpp.integratedscripting.part.PartTypes;
 
@@ -113,6 +118,12 @@ public class IntegratedScriptingCallback extends ModBaseVersionable {
                 .getRegistry(IVariableFacadeHandlerRegistry.class)
                 .registerHandler(ScriptVariableFacadeHandler.getInstance());
 
+        // 2b) Addressed memory: register its object value type and its get/set
+        //     operators. The value type must exist before the operator registry and
+        //     the script translators are built in init().
+        AddressedMemoryValues.load();
+        AddressedMemoryOperators.load();
+
         // 3) M4: create and register the scripting terminal part. PartTypeBase creates the
         //    part's block, item and GUI entry in its constructor, so this must run before
         //    Cyclops handles the configs (same order as Integrated Dynamics' own PartTypes).
@@ -141,6 +152,7 @@ public class IntegratedScriptingCallback extends ModBaseVersionable {
             ValueTranslators.load();
             LanguageHandlers.load();
             clog(ScriptHelpers.getRuntimeDescription());
+            logTypeScriptStatus();
         } catch (LinkageError e) {
             ScriptRuntime.reportUnavailable(e);
         }
@@ -148,6 +160,20 @@ public class IntegratedScriptingCallback extends ModBaseVersionable {
         // M7: temporary acceptance harness, only active with -Disc.m7Smoke=true.
         // Loaded reflectively because the harnesses are excluded from the release jar (M8).
         HarnessLoader.registerIfEnabled(HarnessLoader.PROPERTY_SERVER, HarnessLoader.SERVER_ACCEPTANCE);
+    }
+
+    /**
+     * Log that {@code .ts} scripts are executable.
+     *
+     * <p>The converse - TypeScript disabled by config, or a missing Translanguage
+     * jar in a slim install - is logged by the registration itself, so this only
+     * reports success and keeps the start-up log informative for both cases.</p>
+     */
+    private static void logTypeScriptStatus() {
+        if (LanguageHandlers.REGISTRY.getHandler(LanguageId.TYPESCRIPT) != null) {
+            clog("TypeScript support enabled: .ts scripts are compiled to JavaScript "
+                    + "(Translanguage 2.0.3 SNAPSHOT, Java 8 build) before evaluation.");
+        }
     }
 
     @Mod.EventHandler
@@ -268,7 +294,12 @@ public class IntegratedScriptingCallback extends ModBaseVersionable {
     public void onMainConfigsRegister(ConfigHandler configHandler) {
         configHandler.add(new ScriptingNetworkConfig());
         configHandler.add(new ItemScriptingDiskConfig());
+        // Network refresher: right-click a Display Panel / cable to repair stale
+        // variables and desynced panels (docs/NETWORK-REFRESHER.md).
+        configHandler.add(new ItemRefresherConfig());
         configHandler.add(new BlockScriptingDriveConfig());
+        // The addressed memory, which stores sixteen addressable variables.
+        configHandler.add(new BlockAddressedMemoryConfig());
         // M6: Mendesite, the basic crafting material.
         configHandler.add(new BlockMendesiteConfig());
         // The scripting terminal part is not a config: PartTypes.load() is called in preInit

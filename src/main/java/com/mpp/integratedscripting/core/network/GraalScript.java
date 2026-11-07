@@ -94,6 +94,11 @@ public class GraalScript implements IScript, IScriptMember {
     }
 
     @Override
+    public void release() {
+        this.invalidation.releaseAndNotify();
+    }
+
+    @Override
     public IValue getValue() throws EvaluationException {
         IEvaluationExceptionFactory exceptionFactory = ScriptHelpers.getEvaluationExceptionFactory(
                 this.disk, this.path, this.member);

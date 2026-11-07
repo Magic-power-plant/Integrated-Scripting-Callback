@@ -1,10 +1,14 @@
 package com.mpp.integratedscripting.evaluate;
 
 import com.mpp.GeneralConfig;
+import com.mpp.IntegratedScriptingCallback;
 import com.mpp.integratedscripting.api.evaluate.translation.IEvaluationExceptionFactory;
 import com.mpp.integratedscripting.callback.OperatorBindings;
 import com.mpp.integratedscripting.callback.ScriptErrorTracker;
+import com.mpp.integratedscripting.core.evaluate.value.AddressedMemoryValues;
 import com.mpp.integratedscripting.evaluate.translation.ValueTranslators;
+import org.apache.logging.log4j.Level;
+import org.cyclops.cyclopscore.datastructure.DimPos;
 import org.cyclops.cyclopscore.helper.L10NHelpers;
 import org.cyclops.integrateddynamics.api.evaluate.EvaluationException;
 import org.cyclops.integrateddynamics.api.evaluate.operator.IOperator;
@@ -18,6 +22,9 @@ import org.graalvm.polyglot.Value;
 
 import javax.annotation.Nullable;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
@@ -35,6 +42,12 @@ import java.util.function.Function;
  * @author rubensworks
  */
 public class ScriptHelpers {
+
+    /**
+     * The bare global that holds the only memory of the network, if there is
+     * exactly one. It matches the way players refer to the memory's card.
+     */
+    public static final String MEMORY_CARD_GLOBAL = "内存器变量卡";
 
     private static final Engine ENGINE = Engine
             .newBuilder()
@@ -88,6 +101,31 @@ public class ScriptHelpers {
     public static Context createPopulatedContext(
             @Nullable Function<Context.Builder, Context.Builder> contextBuilderModifier)
             throws EvaluationException {
+        return createPopulatedContext(contextBuilderModifier, Collections.<String, DimPos>emptyMap());
+    }
+
+    /**
+     * Create the script sandbox, including the addressed memories of the network
+     * the script is compiled for.
+     *
+     * <p>A memory is exposed as the value of its memory card: the
+     * {@code addressed_memory} object value, on which {@code get} and
+     * {@code set} are available as methods. The object is reachable as</p>
+     * <ul>
+     *   <li>{@code idContext.memories.<name>} for every memory of the network,</li>
+     *   <li>{@code idContext.memory} when the network has exactly one memory, and</li>
+     *   <li>{@code 内存器变量卡} in that same single-memory case, which is the
+     *       name the memory's own variable card is usually referred to by.</li>
+     * </ul>
+     *
+     * @param contextBuilderModifier An optional context builder modifier.
+     * @param memories The addressed memories of the network, keyed by stable name.
+     * @return A populated Graal context.
+     * @throws EvaluationException When the context could not be created.
+     */
+    public static Context createPopulatedContext(
+            @Nullable Function<Context.Builder, Context.Builder> contextBuilderModifier,
+            @Nullable Map<String, DimPos> memories) throws EvaluationException {
         Context context = createBaseContext(contextBuilderModifier);
 
         // Create the idContext field with the synthesized global operators (§5.4).
@@ -104,7 +142,51 @@ public class ScriptHelpers {
         idContext.putMember("ops", ops);
         jsBindings.putMember("idContext", idContext);
 
+        bindMemories(context, jsBindings, idContext, jsObjectClass, memories);
+
         return context;
+    }
+
+    /**
+     * Add the memory bindings to an already created sandbox.
+     */
+    private static void bindMemories(Context context, Value jsBindings, Value idContext, Value jsObjectClass,
+                                     @Nullable Map<String, DimPos> memories) {
+        if (memories == null || memories.isEmpty()) {
+            return;
+        }
+        List<String> names = new ArrayList<>(memories.keySet());
+        Collections.sort(names);
+
+        Value memoryObject = jsObjectClass.newInstance();
+        Value single = null;
+        int index = 0;
+        for (String name : names) {
+            Value memoryValue;
+            try {
+                memoryValue = ValueTranslators.REGISTRY.translateToGraal(context,
+                        AddressedMemoryValues.of(memories.get(name)),
+                        getDummyEvaluationExceptionFactory());
+            } catch (EvaluationException e) {
+                // A missing translator must never prevent a script from compiling.
+                IntegratedScriptingCallback.clog(Level.WARN,
+                        "Could not expose addressed memory " + name + " to scripts: " + e.getMessage());
+                continue;
+            }
+            memoryObject.putMember(name, memoryValue);
+            memoryObject.putMember(String.valueOf(index++), memoryValue);
+            if (single == null) {
+                single = memoryValue;
+            }
+        }
+        idContext.putMember("memories", memoryObject);
+
+        if (names.size() == 1 && single != null) {
+            idContext.putMember("memory", single);
+            // The memory's own variable card is what players call the memory; make
+            // that exact name usable as a bare global in scripts.
+            jsBindings.putMember(MEMORY_CARD_GLOBAL, single);
+        }
     }
 
     @Nullable

@@ -45,6 +45,7 @@ public final class ClientLanguageIcons {
      */
     public static void registerDefaults() {
         REGISTRY.registerIcon(LanguageId.JAVASCRIPT, ScriptImages.FILE_JS);
+        REGISTRY.registerIcon(LanguageId.TYPESCRIPT, ScriptImages.FILE_TS);
     }
 
     private static final class Registry implements ILanguageIconRegistry {

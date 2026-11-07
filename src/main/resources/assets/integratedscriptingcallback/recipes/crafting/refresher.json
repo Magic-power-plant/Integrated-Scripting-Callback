@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " M ",
+    "MVM",
+    " R "
+  ],
+  "key": {
+    "M": {
+      "item": "integratedscriptingcallback:mendesite",
+      "data": 0
+    },
+    "V": {
+      "item": "integrateddynamics:variable"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "item": "integratedscriptingcallback:refresher",
+    "data": 0
+  }
+}

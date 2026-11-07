@@ -27,6 +27,13 @@ public class ScriptImages {
     public static final IImage FILE_OTHER = new Image(ICONS, 0, 0, 12, 12);
     /** Icon for a JavaScript file, provided by {@code LanguageHandlerJavaScript}. */
     public static final IImage FILE_JS = new Image(ICONS, 12, 0, 12, 12);
+    /**
+     * Icon for a TypeScript file. The sheet has no third 12x12 icon yet (the next
+     * column starts at x=24 and is empty), so TypeScript shares the JavaScript
+     * page; the registry still stores it per language id, so a dedicated texture
+     * only has to change this one constant.
+     */
+    public static final IImage FILE_TS = FILE_JS;
 
     private ScriptImages() {
     }

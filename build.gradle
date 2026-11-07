@@ -1,6 +1,10 @@
 plugins {
     id 'java'
     id 'com.gtnewhorizons.retrofuturagradle' version '2.0.3'
+    // Bundles the GraalJS runtime into the release jar (single-jar distribution,
+    // docs/PORTING-1.12.2.md §3.4). Gradle 9 needs the maintained GradleUp fork;
+    // the legacy com.github.johnrengelman.shadow 8.x line does not support it.
+    id 'com.gradleup.shadow' version '9.6.1'
 }
 
 version = project.mod_version
@@ -17,11 +21,97 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs += ['-Xlint:deprecation']
 }
 
+configurations {
+    // Runtime jars that shadowJar bundles into the release jar. Kept in its own
+    // configuration (not implementation/runtimeOnly) so the development
+    // classpath used by runClient/runServer/test keeps resolving exactly the
+    // same artifacts as before.
+    shade
+}
+
+// ---------------------------------------------------------------------------
+// TypeScript support: Translanguage (vendored).
+// ---------------------------------------------------------------------------
+// Translanguage (https://github.com/pingsu/Translanguage, MIT) turns TypeScript
+// into JavaScript with zero runtime dependencies. The mod needs it as a library,
+// so the Java 8 build of the JAR is vendored under libs/ instead of being pulled
+// from a repository: 2.0.3-SNAPSHOT is an unreleased development version, and
+// only the -java8 classifier produces bytecode a 1.12.2 (Java 8) game can load.
+//
+// The main and java8 artifacts share package and class names, so exactly one of
+// them may ever be on the classpath; verifyTranslanguageArtifact enforces that
+// and pins the exact bytes. Rationale and the evaluation data behind this choice
+// are in docs/TYPESCRIPT-TRANSLANGUAGE.md.
+def translanguageJar = file('libs/Translanguage-2.0.3-SNAPSHOT-java8.jar')
+def translanguageSha256 = '402b4fd8c36ab21649b358fd6f21dd9de2c9a79fbd3ce210cc573f54432eeb9e'
+
+def verifyTranslanguageArtifact = tasks.register('verifyTranslanguageArtifact') {
+    group = 'verification'
+    description = 'Pins the vendored Translanguage jar and refuses a second copy on the classpath.'
+    inputs.files(translanguageJar)
+    inputs.property('sha256', translanguageSha256)
+    doLast {
+        def jars = file('libs').listFiles({ f -> f.isFile()
+                && f.name.startsWith('Translanguage-') && f.name.endsWith('.jar') } as FileFilter)
+        if (jars == null || jars.length != 1) {
+            throw new GradleException("Expected exactly one vendored Translanguage jar in libs/, found: "
+                    + (jars == null ? 'none' : jars.collect { it.name }.join(', '))
+                    + ". The main and -java8 artifacts share class names; keep only the -java8 one.")
+        }
+        if (!translanguageJar.isFile()) {
+            throw new GradleException("Missing vendored Translanguage jar: ${translanguageJar}")
+        }
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        digest.update(translanguageJar.bytes)
+        def actual = digest.digest().collect { String.format('%02x', it) }.join()
+        if (actual != translanguageSha256) {
+            throw new GradleException("The vendored Translanguage jar does not match its pinned SHA-256."
+                    + "\n  expected: ${translanguageSha256}\n  actual:   ${actual}"
+                    + "\nSee docs/TYPESCRIPT-TRANSLANGUAGE.md before replacing it.")
+        }
+        logger.lifecycle("Verified ${translanguageJar.name} (SHA-256 ${actual}).")
+    }
+}
+
+// Nothing may compile against an unverified or duplicated Translanguage jar.
+tasks.withType(JavaCompile).configureEach {
+    dependsOn verifyTranslanguageArtifact
+}
+
 def mixinConfig = project.mixin_config
 def mixinRefmap = new groovy.json.JsonSlurper()
         .parse(file("src/main/resources/${mixinConfig}")).refmap
 if (!(mixinRefmap instanceof String) || mixinRefmap.trim().isEmpty()) {
     throw new GradleException("${mixinConfig} must declare a non-empty refmap")
+}
+
+// Manifest attributes shared by the dev jar, the slim jar and the shaded jar.
+// (Kept as one map so a shaded release can never drift from the plain jar.)
+def jarManifestAttributes = [
+        'MixinConfigs'                : mixinConfig,
+        'FMLCorePluginContainsFMLMod' : 'false'
+]
+
+// Decision M8 (docs/MILESTONES.md): the development-only acceptance harnesses
+// drive a real client/server and must not ship. Whatever needs them reaches them
+// reflectively through HarnessLoader, so excluding them is safe. A smoke run
+// keeps exactly the harness it drives, through the matching -P property.
+// Every shipped jar (dev, slim, shaded) uses this one list.
+def harnessExcludes = []
+if (!project.hasProperty('guiSmoke')) {
+    harnessExcludes << 'com/mpp/integratedscripting/client/gui/container/GuiSmokeHarness*.class'
+}
+if (!project.hasProperty('resourceSmoke')) {
+    harnessExcludes << 'com/mpp/integratedscripting/client/gui/container/ResourceSmokeHarness*.class'
+}
+if (!project.hasProperty('m7Gui')) {
+    harnessExcludes << 'com/mpp/integratedscripting/client/gui/container/ClientAcceptanceHarness*.class'
+}
+if (!project.hasProperty('m7Smoke')) {
+    harnessExcludes << 'com/mpp/integratedscripting/acceptance/ServerAcceptance*.class'
+}
+if (!project.hasProperty('memorySmoke')) {
+    harnessExcludes << 'com/mpp/integratedscripting/client/gui/container/AddressedMemorySmokeHarness*.class'
 }
 
 minecraft {
@@ -63,12 +153,26 @@ dependencies {
     implementation(mixin) { transitive = false }
     annotationProcessor mixin
 
-    // GraalJS: compile-time plus dev runtime. Production is supplied by the
-    // separate integratedscriptingcallbacklibs mod (decision B2/B3).
+    // GraalJS: compile-time plus dev runtime. The release jar bundles the same
+    // runtime through the `shade` configuration below (single-jar distribution),
+    // so players no longer need the separate integratedscriptingcallbacklibs mod.
     compileOnly "org.graalvm.sdk:graal-sdk:${project.graal_version}"
     compileOnly "org.graalvm.js:js:${project.graal_version}"
     runtimeOnly "org.graalvm.sdk:graal-sdk:${project.graal_version}"
     runtimeOnly "org.graalvm.js:js:${project.graal_version}"
+
+    // Bundled into the release jar by shadowJar. Pulls the same transitives the
+    // dev runtime already gets: truffle-api, regex and icu4j.
+    shade "org.graalvm.sdk:graal-sdk:${project.graal_version}"
+    shade("org.graalvm.js:js:${project.graal_version}")
+
+    // Translanguage: compiles TypeScript to the bare JavaScript this mod evaluates.
+    // Zero transitive dependencies, so it is a plain file dependency: compileOnly
+    // for the bytecode, runtimeOnly for runClient/runServer, shade for the release
+    // jar (players get it inside the mod jar, like GraalJS).
+    compileOnly files(translanguageJar)
+    runtimeOnly files(translanguageJar)
+    shade files(translanguageJar)
 
     // Unit tests compile against, and run with, the same 1.12.2 API jars.
     testCompileOnly files('libs/CyclopsCore-1.12.2-1.6.7.jar')
@@ -83,6 +187,7 @@ dependencies {
 
     testImplementation "org.graalvm.sdk:graal-sdk:${project.graal_version}"
     testImplementation "org.graalvm.js:js:${project.graal_version}"
+    testImplementation files(translanguageJar)
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:2.28.2'
     testCompileOnly 'org.projectlombok:lombok:1.18.22'
@@ -100,27 +205,96 @@ tasks.named('processResources') {
 }
 
 tasks.named('jar') {
-    // Decision M8 (docs/MILESTONES.md): the development-only acceptance harnesses
-    // drive a real client/server and must not ship. Whatever needs them reaches
-    // them reflectively through HarnessLoader, so excluding them here is safe.
-    // A smoke run loads its own harness from this same dev jar (the FML mod class
-    // loader does not see build/classes), so include only that harness for its run.
-    if (!project.hasProperty('guiSmoke')) {
-        exclude 'com/mpp/integratedscripting/client/gui/container/GuiSmokeHarness*.class'
-    }
-    if (!project.hasProperty('resourceSmoke')) {
-        exclude 'com/mpp/integratedscripting/client/gui/container/ResourceSmokeHarness*.class'
-    }
-    if (!project.hasProperty('m7Gui')) {
-        exclude 'com/mpp/integratedscripting/client/gui/container/ClientAcceptanceHarness*.class'
-    }
-    if (!project.hasProperty('m7Smoke')) {
-        exclude 'com/mpp/integratedscripting/acceptance/ServerAcceptance*.class'
-    }
-    manifest.attributes(
-            'MixinConfigs'                 : mixinConfig,
-            'FMLCorePluginContainsFMLMod'  : 'false'
-    )
+    exclude harnessExcludes
+    manifest.attributes(jarManifestAttributes)
+}
+
+// ---------------------------------------------------------------------------
+// Single-jar release: Gradle Shadow bundles the GraalJS runtime into the jar.
+// ---------------------------------------------------------------------------
+// Decision update to docs/PORTING-1.12.2.md §3.4 (B2/B3/D7): the release jar is
+// self-contained, so the companion integratedscriptingcallbacklibs mod is no
+// longer required.
+//
+// Flow: shadowJar (dev classes + Graal) -> reobfShadowJar (MCP -> SRG).
+// RFG creates the `reobf<JarTask>` task through a task rule, so the shaded jar
+// goes through exactly the same reobfuscation as the plain jar, in one pass.
+// Shading first also keeps the mod classes in a single place: the copy spec
+// never holds both the dev and the reobfuscated copy of the same class, which
+// is what a "shade the reobfJar output" setup would have to untangle.
+//
+// No relocation. The mod links against org.graalvm.polyglot at compile time and
+// probes it by name at runtime (evaluate/ScriptRuntime), so moving those
+// packages would break both the bytecode references and the Class.forName
+// probe. Truffle's internal name assumptions make relocation the risky option.
+//
+// Products in build/libs/:
+//   Integrated-Scripting-Callback-1.12.2-1.0.jar       release, includes GraalJS
+//   Integrated-Scripting-Callback-1.12.2-1.0-slim.jar  mod only (libs-mod setup)
+//   Integrated-Scripting-Callback-1.12.2-1.0-dev.jar   development jar
+
+// The plain reobfuscated jar keeps the two-jar distribution path working; the
+// shaded jar takes the default (unclassified) name so the obvious artefact is
+// also the working one.
+tasks.named('reobfJar') {
+    archiveClassifier.set('slim')
+}
+
+tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    // shadowJar output is an intermediate: it still carries MCP names, so it is
+    // parked in build/tmp and only reobfShadowJar's output is shipped.
+    archiveClassifier.set('all')
+    destinationDirectory.set(layout.buildDirectory.dir('tmp/shadow'))
+
+    configurations.set([project.configurations.shade])
+
+    // RFG writes the @Mod metadata class (ModMeta) into the `injectedTags` source
+    // set and wires it into `jar` only; Shadow builds from sourceSets.main, so
+    // without this the release jar would miss com/mpp/ModMeta.class.
+    from(sourceSets.named('injectedTags').map { it.output })
+
+    // GraalVM loads its language/engine providers through service files, and
+    // GraalJS ships META-INF/versions/11 entries, so both need care:
+    //   - mergeServiceFiles() merges META-INF/services/* (+ TruffleLanguage$Provider)
+    //   - "Multi-Release: true" lets a JDK 9+ runtime read META-INF/versions/*
+    // The attributes are set explicitly rather than inherited from the jar task:
+    // Shadow's InheritManifest already points at `jar`, and inheriting it a
+    // second time recurses while Gradle merges the manifest.
+    mergeServiceFiles()
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    // The vendored Translanguage jar ships its own META-INF/LICENSE and
+    // META-INF/THIRD_PARTY_NOTICES.md; the mod ships the same texts under
+    // Translanguage-* names, so the generic copies are redundant and only make
+    // the attribution ambiguous in a single-jar product.
+    exclude 'META-INF/LICENSE', 'META-INF/THIRD_PARTY_NOTICES.md'
+    // Module descriptors are meaningless on a 1.12.2 classpath and both Graal
+    // jars ship one, so dropping them also removes the only duplicate entries
+    // in the shaded jar.
+    exclude 'module-info.class', 'META-INF/versions/**/module-info.class'
+    manifest.attributes(jarManifestAttributes + ['Multi-Release': 'true'])
+
+    // Shadow copies sourceSets.main.output directly, so the `jar` task's
+    // harness exclusions do not apply here on their own.
+    exclude harnessExcludes
+
+    // `./gradlew shadowJar` must leave the shippable jar behind, not only the
+    // MCP-named intermediate; `build`/`assemble` depend on the reobf task too.
+    finalizedBy 'reobfShadowJar'
+}
+
+// RFG creates this task from a rule, so it has to be looked up by name once the
+// shadowJar task exists; its reobfuscated output is the shippable release jar.
+tasks.named('reobfShadowJar', com.gtnewhorizons.retrofuturagradle.mcp.ReobfuscatedJar) {
+    destinationDirectory.set(layout.buildDirectory.dir('libs'))
+    // modUtils attaches the Mixin refmap's extra SRG entries to `reobfJar` only;
+    // mirror them here so a future mixin cannot work in dev/slim and break in the
+    // release jar. (The current mixin config is empty, so this is a no-op today.)
+    extraSrgFiles.from(tasks.named('reobfJar',
+            com.gtnewhorizons.retrofuturagradle.mcp.ReobfuscatedJar).map { it.extraSrgFiles })
+}
+
+tasks.named('assemble') {
+    dependsOn tasks.named('reobfShadowJar')
 }
 
 tasks.named('test') {
@@ -166,5 +340,14 @@ if (project.hasProperty('m7Smoke')) {
 if (project.hasProperty('m7Gui')) {
     tasks.named('runClient') {
         jvmArgs '-Disc.m7Gui=true'
+    }
+}
+
+// Addressed memory acceptance hook: `./gradlew runClient -PmemorySmoke` drives
+// the block, its get/set operators, its script bindings and its GUI in a real
+// singleplayer world (screenshots in run/screenshots/memory-*.png).
+if (project.hasProperty('memorySmoke')) {
+    tasks.named('runClient') {
+        jvmArgs '-Disc.memorySmoke=true'
     }
 }

@@ -30,11 +30,14 @@ public final class HarnessLoader {
             "com.mpp.integratedscripting.client.gui.container.ResourceSmokeHarness";
     public static final String CLIENT_ACCEPTANCE_HARNESS =
             "com.mpp.integratedscripting.client.gui.container.ClientAcceptanceHarness";
+    public static final String MEMORY_SMOKE_HARNESS =
+            "com.mpp.integratedscripting.client.gui.container.AddressedMemorySmokeHarness";
 
     public static final String PROPERTY_SERVER = "isc.m7Smoke";
     public static final String PROPERTY_GUI_SMOKE = "isc.guiSmoke";
     public static final String PROPERTY_RESOURCE_SMOKE = "isc.resourceSmoke";
     public static final String PROPERTY_CLIENT = "isc.m7Gui";
+    public static final String PROPERTY_MEMORY_SMOKE = "isc.memorySmoke";
 
     private HarnessLoader() {
     }

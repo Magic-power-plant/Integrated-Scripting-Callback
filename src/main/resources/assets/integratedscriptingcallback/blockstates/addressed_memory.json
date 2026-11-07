@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "integratedscriptingcallback:addressed_memory" },
+    "facing=east":  { "model": "integratedscriptingcallback:addressed_memory", "y": 90 },
+    "facing=south": { "model": "integratedscriptingcallback:addressed_memory", "y": 180 },
+    "facing=west":  { "model": "integratedscriptingcallback:addressed_memory", "y": 270 }
+  }
+}

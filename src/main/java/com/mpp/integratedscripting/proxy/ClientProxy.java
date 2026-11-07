@@ -44,6 +44,8 @@ public class ClientProxy extends ClientProxyComponent {
                 HarnessLoader.RESOURCE_SMOKE_HARNESS);
         HarnessLoader.registerIfEnabled(HarnessLoader.PROPERTY_CLIENT,
                 HarnessLoader.CLIENT_ACCEPTANCE_HARNESS);
+        HarnessLoader.registerIfEnabled(HarnessLoader.PROPERTY_MEMORY_SMOKE,
+                HarnessLoader.MEMORY_SMOKE_HARNESS);
     }
 
 }

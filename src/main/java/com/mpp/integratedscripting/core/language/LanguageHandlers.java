@@ -1,5 +1,6 @@
 package com.mpp.integratedscripting.core.language;
 
+import com.mpp.GeneralConfig;
 import com.mpp.IntegratedScriptingCallback;
 import com.mpp.integratedscripting.api.language.ILanguageHandler;
 import com.mpp.integratedscripting.api.language.ILanguageHandlerRegistry;
@@ -15,6 +16,7 @@ import com.mpp.integratedscripting.core.language.contributor.KeywordCompletionCo
 import com.mpp.integratedscripting.core.language.contributor.MethodCompletionContributor;
 import com.mpp.integratedscripting.core.language.contributor.OperatorCompletionContributor;
 import com.mpp.integratedscripting.core.language.service.LanguageServiceRegistry;
+import com.mpp.integratedscripting.core.language.typescript.TypeScriptRuntime;
 import org.cyclops.cyclopscore.helper.MinecraftHelpers;
 
 import javax.annotation.Nullable;
@@ -130,6 +132,58 @@ public class LanguageHandlers {
 
         services.registerContributor(language, LanguageContributorKeys.SERVER_START_TASKS, 0,
                 new TypeScriptTypingsTask());
+
+        registerTypeScript(handlers, services);
+    }
+
+    /**
+     * Register the built-in TypeScript language, if the config allows it and the
+     * Translanguage compiler is on the classpath.
+     *
+     * <p>Deliberately a separate method: it is the only place that references
+     * {@link LanguageHandlerTypeScript} and its compiler, so the JVM resolves
+     * those classes only after the probe passed. A slim jar without the
+     * transpiler therefore loses TypeScript and keeps JavaScript, instead of
+     * failing to load this class (compare {@code ScriptRuntime}).</p>
+     *
+     * <p>TypeScript reuses the JavaScript services where the two languages agree
+     * (completion policy, generic contributors, editing rules) and adds only what
+     * differs: the language id, the {@code ts} extension, the TypeScript keyword
+     * set and the compiling script factory.</p>
+     *
+     * @param handlers The handler registry to register the language in.
+     * @param services The service registry to register its services in.
+     */
+    private static void registerTypeScript(ILanguageHandlerRegistry handlers,
+                                           ILanguageServiceRegistry services) {
+        if (!GeneralConfig.typescriptEnabled) {
+            IntegratedScriptingCallback.clog("TypeScript support is disabled in the config.");
+            return;
+        }
+        if (!TypeScriptRuntime.isAvailable()) {
+            TypeScriptRuntime.logUnavailable();
+            return;
+        }
+
+        LanguageHandlerTypeScript handler = new LanguageHandlerTypeScript();
+        handlers.register(handler);
+
+        LanguageId language = handler.getLanguageId();
+        services.registerService(language, LanguageServiceKeys.HIGHLIGHT,
+                new TypeScriptHighlightService());
+        services.registerService(language, LanguageServiceKeys.EDIT, new TypeScriptEditSupport());
+        services.registerService(language, LanguageServiceKeys.COMPLETION,
+                new JavaScriptCompletionService());
+
+        services.registerContributor(language, LanguageContributorKeys.COMPLETION, 100,
+                new KeywordCompletionContributor(JavaScriptLexer.TYPESCRIPT_KEYWORDS,
+                        CompletionKind.KEYWORD));
+        services.registerContributor(language, LanguageContributorKeys.COMPLETION, 80,
+                new DocumentSymbolCompletionContributor());
+        services.registerContributor(language, LanguageContributorKeys.COMPLETION, 60,
+                new OperatorCompletionContributor());
+        services.registerContributor(language, LanguageContributorKeys.COMPLETION, 40,
+                new MethodCompletionContributor());
     }
 
     /**

@@ -9,9 +9,13 @@ import com.mpp.integratedscripting.api.language.edit.IIdentifierSyntax;
  * comments, identifier rules that include {@code $} and Unicode, and {@code js}
  * as the extension of a new file.
  *
+ * <p>Every one of those conventions is also TypeScript's, so
+ * {@link TypeScriptEditSupport} extends this class and changes only the default
+ * file extension.</p>
+ *
  * @author rubensworks
  */
-public final class JavaScriptEditSupport implements IEditSupport {
+public class JavaScriptEditSupport implements IEditSupport {
 
     /** One indentation step. */
     public static final String INDENT_UNIT = "    ";

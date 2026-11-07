@@ -10,13 +10,17 @@ import com.mpp.integratedscripting.core.evaluate.ScriptVariableFacadeHandler;
 import com.mpp.integratedscripting.core.item.ScriptVariableFacade;
 import com.mpp.integratedscripting.core.network.ScriptingNetwork;
 import com.mpp.integratedscripting.core.network.ScriptingNetworkHelpers;
+import com.mpp.integratedscripting.core.language.typescript.TypeScriptRuntime;
+import com.mpp.integratedscripting.item.ItemRefresher;
+import com.mpp.integratedscripting.item.RefreshResult;
+import com.mpp.integratedscripting.item.RefresherActions;
 import com.mpp.integratedscripting.part.PartTypes;
 import net.minecraft.block.Block;
 import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.CraftingManager;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
@@ -96,6 +100,20 @@ public class ServerAcceptance {
             + "const opsCall = () => idContext.ops.itemstackStackable("
             + "{ id_item: { id: 'minecraft:stone', Count: 1 } });\n"
             + "const strength = (item, block) => item.strength(block);";
+
+    /** §11.2 item 29: a TypeScript script that only works after a real transpile. */
+    private static final String TYPESCRIPT_PATH = "main.ts";
+    private static final String TYPESCRIPT = String.join("\n",
+            "interface TsBox { size: number }",
+            "enum TsMode { A, B = 41 }",
+            "class TsBoxImpl implements TsBox {",
+            "  constructor(public size: number) {}",
+            "}",
+            "const tsFoo: number = 77;",
+            "const tsMode: TsMode = TsMode.B;",
+            "const tsBoxImpl: TsBox = new TsBoxImpl(3);",
+            "const tsBoxSize: number = tsBoxImpl.size;",
+            "function tsDouble(input: number): number { return input * 2; }");
 
     private int phase;
     private int phaseTicks;
@@ -258,6 +276,9 @@ public class ServerAcceptance {
                 return;
             case 16:
                 checkPanelValue(43);
+                // The network refresher: the panel above now displays 43 with a
+                // live script card, which is the exact state the tool repairs.
+                checkRefresher();
                 nextPhase();
                 return;
             case 17:
@@ -292,6 +313,16 @@ public class ServerAcceptance {
                 this.maxTickBeforePerformance = this.maxTickNanos;
                 this.longTicksBeforePerformance = this.longTicks;
                 checkPerformance();
+                nextPhase();
+                return;
+            case 23:
+                // §11.2 item 29: TypeScript. A .ts script must reach the same sandbox
+                // as a .js one, after compiling, in a real world (docs/TYPESCRIPT-TRANSLANGUAGE.md).
+                writeTypeScriptScript();
+                nextPhase();
+                return;
+            case 24:
+                checkTypeScriptScript();
                 nextPhase();
                 return;
             default:
@@ -529,6 +560,74 @@ public class ServerAcceptance {
                 network, partNetwork, target, (PartTypePanelDisplay.State) state);
     }
 
+    /**
+     * Acceptance for the network refresher item (docs/NETWORK-REFRESHER.md).
+     *
+     * <p>Runs after check 16, where the Display Panel displays 43 through a live
+     * script card. The refresher is network-only: right-clicking the panel/cable
+     * must refresh the whole network, which also recomputes the panel.</p>
+     */
+    private void checkRefresher() {
+        Item item = Item.getByNameOrId(Reference.MOD_ID + ":refresher");
+        check("30a", item instanceof ItemRefresher,
+                "the network refresher item is registered (" + item + ")");
+        boolean recipeFound = false;
+        for (net.minecraft.item.crafting.IRecipe recipe : CraftingManager.REGISTRY) {
+            ItemStack output = recipe.getRecipeOutput();
+            if (!output.isEmpty() && output.getItem() == item) {
+                recipeFound = true;
+                break;
+            }
+        }
+        check("30b", recipeFound,
+                "a crafting recipe for the network refresher is registered");
+
+        IPartState state = displayPanelState();
+        if (!(state instanceof PartTypePanelDisplay.State)) {
+            fail("no Display Panel state for the refresher check");
+            return;
+        }
+        PartTypePanelDisplay.State panelState = (PartTypePanelDisplay.State) state;
+
+        // Poison the panel first: the network refresh must recompute 43 from the
+        // network instead of keeping whatever was displayed.
+        panelState.setDisplayValue(ValueTypeInteger.ValueInteger.of(999));
+        RefreshResult networkResult = RefresherActions.use(this.world, this.cablePos);
+        check("30c", networkResult != null && networkResult.getKind() == RefreshResult.Kind.NETWORK,
+                "right-clicking the Display Panel/cable refreshes the whole network (result="
+                        + networkResult + ")");
+        IValue displayed = panelState.getDisplayValue();
+        check("30d", displayed instanceof ValueTypeInteger.ValueInteger
+                        && ((ValueTypeInteger.ValueInteger) displayed).getRawValue() == 43,
+                "the network refresh recomputed the display to 43 (value="
+                        + (displayed == null ? "null" : displayed.getType().toCompactString(displayed)) + ")");
+
+        // A non-cable block must not be intercepted by the tool.
+        check("30e", RefresherActions.use(this.world, this.drivePos) == null,
+                "the refresher ignores non-cable blocks");
+
+        INetwork network = idNetwork();
+        if (network == null) {
+            fail("no network for the refresher network check");
+            return;
+        }
+        // A crashed network is skipped by ID's tick handler; the refresher must
+        // recover it and still visit the Display Panel.
+        network.setCrashed(true);
+        RefreshResult crashResult = RefresherActions.use(this.world, this.cablePos);
+        check("30f", crashResult != null && crashResult.getKind() == RefreshResult.Kind.NETWORK
+                        && crashResult.isCrashCleared(),
+                "refreshing the network clears its crash flag (result=" + crashResult + ")");
+        check("30g", !network.isCrashed(),
+                "the network is no longer crashed after the refresh");
+        check("30h", crashResult != null && crashResult.getNetworkPartCount() >= 1
+                        && crashResult.getNetworkDisplayCount() >= 1,
+                "the network refresh visited the Display Panel (parts="
+                        + (crashResult == null ? "null" : crashResult.getNetworkPartCount())
+                        + ", displays=" + (crashResult == null ? "null"
+                        : crashResult.getNetworkDisplayCount()) + ")");
+    }
+
     @Nullable
     private IPartState displayPanelState() {
         Pair<IPartType, IPartState> data =
@@ -720,6 +819,74 @@ public class ServerAcceptance {
                 + " -> " + result);
     }
 
+    // ---------------------------------------------------------------- §11.2 item 29
+
+    /**
+     * TypeScript acceptance: write a {@code .ts} script that only works if types
+     * are erased, an {@code enum} is lowered and a constructor parameter property
+     * is materialised, then read its members back through the same facade a
+     * variable card uses.
+     *
+     * <p>This is the only check that runs the whole TypeScript path inside a real
+     * game: {@code TypeScriptScriptFactory} reads the file, Translanguage compiles
+     * it, and GraalJS evaluates the result in the same sandbox as {@code .js}.</p>
+     */
+    private void writeTypeScriptScript() {
+        if (!TypeScriptRuntime.isAvailable()) {
+            log("TypeScript is not on the classpath, skipping the .ts phases");
+            return;
+        }
+        setScript(TYPESCRIPT_PATH, TYPESCRIPT);
+        check("29a", scripts().containsKey(Paths.get(TYPESCRIPT_PATH)),
+                "the TypeScript script was written to the disk: " + TYPESCRIPT_PATH);
+    }
+
+    private void checkTypeScriptScript() {
+        if (!TypeScriptRuntime.isAvailable()) {
+            return;
+        }
+        Path path = Paths.get(TYPESCRIPT_PATH);
+        try {
+            IValue foo = evalMember(path, "tsFoo");
+            check("29b", foo instanceof ValueTypeInteger.ValueInteger
+                            && ((ValueTypeInteger.ValueInteger) foo).getRawValue() == 77,
+                    "a typed constant compiles and evaluates in game (value="
+                            + foo.getType().toCompactString(foo) + ")");
+
+            IValue mode = evalMember(path, "tsMode");
+            check("29c", mode instanceof ValueTypeInteger.ValueInteger
+                            && ((ValueTypeInteger.ValueInteger) mode).getRawValue() == 41,
+                    "an enum member keeps its initialiser (value="
+                            + mode.getType().toCompactString(mode) + ")");
+
+            IValue boxSize = evalMember(path, "tsBoxSize");
+            check("29d", boxSize instanceof ValueTypeInteger.ValueInteger
+                            && ((ValueTypeInteger.ValueInteger) boxSize).getRawValue() == 3,
+                    "a constructor parameter property becomes a field (value="
+                            + boxSize.getType().toCompactString(boxSize) + ")");
+
+            IValue doubled = evalMember(path, "tsDouble");
+            check("29e", doubled instanceof ValueTypeOperator.ValueOperator,
+                    "a typed function becomes an operator value (type="
+                            + doubled.getType().toCompactString(doubled) + ")");
+
+            // A TypeScript syntax error must be a readable evaluation error, not a crash.
+            scriptingData().setScript(this.diskId, Paths.get(TYPESCRIPT_PATH),
+                    "const broken: = 1;", IScriptingData.ChangeLocation.MEMORY);
+            try {
+                evalMember(path, "tsFoo");
+                fail("29f: a broken TypeScript script must not evaluate");
+            } catch (EvaluationException e) {
+                String message = String.valueOf(e.getMessage());
+                check("29f", message.contains(TYPESCRIPT_PATH) && message.contains("line"),
+                        "a TypeScript compile error reports the file and position: " + message);
+            }
+        } catch (Throwable t) {
+            fail("29: the TypeScript check threw: " + t);
+            t.printStackTrace();
+        }
+    }
+
     // ---------------------------------------------------------------- §11.2 item 28
 
     private void checkPerformance() {
@@ -906,3 +1073,5 @@ public class ServerAcceptance {
     }
 
 }
+
+

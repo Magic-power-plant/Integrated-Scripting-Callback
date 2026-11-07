@@ -52,6 +52,25 @@ public final class JavaScriptLexer implements ILineTokenizer {
             "var", "void", "while", "with", "yield")));
 
     /**
+     * Words that are only keywords in TypeScript: declaration keywords, member
+     * modifiers, assertion and query operators, and the primitive type names.
+     *
+     * <p>They are kept apart from {@link #KEYWORDS} so that {@code .js}
+     * highlighting does not colour {@code type}, {@code as} or {@code from},
+     * which are ordinary identifiers there.</p>
+     */
+    public static final Set<String> TYPESCRIPT_ONLY_KEYWORDS =
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+                    "abstract", "any", "as", "asserts", "bigint", "boolean", "declare", "enum",
+                    "from", "implements", "infer", "interface", "is", "keyof", "module",
+                    "namespace", "never", "number", "object", "override", "private", "protected",
+                    "public", "readonly", "satisfies", "string", "symbol", "type", "unique",
+                    "unknown")));
+
+    /** The keyword set of TypeScript: the JavaScript keywords plus the TS-only ones. */
+    public static final Set<String> TYPESCRIPT_KEYWORDS = typescriptKeywords();
+
+    /**
      * Keywords after which a slash starts a regular expression rather than a
      * division. Kept in sync with the expression-position heuristic below.
      */
@@ -106,7 +125,21 @@ public final class JavaScriptLexer implements ILineTokenizer {
      * @return The line's tokens and the state at the end of the line.
      */
     public static LineTokens tokenize(@Nullable String line, @Nullable State start) {
+        return tokenize(line, start, KEYWORDS);
+    }
+
+    /**
+     * Tokenize one line with a language specific keyword set.
+     * @param line The line to tokenize, without newline characters.
+     * @param start The state at the start of the line; {@code null} means {@link State#CODE}.
+     * @param keywords The words to tokenize as keywords, for example
+     *                 {@link #KEYWORDS} or {@link #TYPESCRIPT_KEYWORDS}.
+     * @return The line's tokens and the state at the end of the line.
+     */
+    public static LineTokens tokenize(@Nullable String line, @Nullable State start,
+                                      @Nullable Set<String> keywords) {
         String text = line == null ? "" : line;
+        Set<String> keywordSet = keywords == null ? KEYWORDS : keywords;
         State state = start == null ? State.CODE : start;
         List<Token> tokens = Lists.newArrayList();
 
@@ -221,7 +254,7 @@ public final class JavaScriptLexer implements ILineTokenizer {
                     end++;
                 }
                 String word = text.substring(i, end);
-                if (KEYWORDS.contains(word)) {
+                if (keywordSet.contains(word)) {
                     add(tokens, i, end, TokenType.KEYWORD);
                     previous = REGEX_KEYWORDS.contains(word) ? 'R' : 'a';
                 } else if (previous == '.') {
@@ -543,6 +576,15 @@ public final class JavaScriptLexer implements ILineTokenizer {
      */
     public static boolean isIdentifierPart(char c) {
         return Character.isJavaIdentifierPart(c);
+    }
+
+    /**
+     * @return The JavaScript keywords plus the TypeScript-only ones.
+     */
+    private static Set<String> typescriptKeywords() {
+        Set<String> keywords = new HashSet<>(KEYWORDS);
+        keywords.addAll(TYPESCRIPT_ONLY_KEYWORDS);
+        return Collections.unmodifiableSet(keywords);
     }
 
     private static void add(List<Token> tokens, int start, int end, TokenType type) {

@@ -129,6 +129,12 @@ public class LanguageHandlerRegistry implements ILanguageHandlerRegistry {
     @Nullable
     @Override
     public synchronized ILanguageHandler getProvider(Path filePath) {
+        // A .d.ts declaration file only describes types: it is generated for the
+        // IDE, it is never evaluated, and the registry would otherwise hand it to
+        // the TypeScript language because its last extension is "ts".
+        if (isTypeScriptDeclaration(filePath)) {
+            return null;
+        }
         String extension = getPathExtension(filePath);
         if (extension != null) {
             return this.extensionToHandlerMap.get(extension);
@@ -231,6 +237,26 @@ public class LanguageHandlerRegistry implements ILanguageHandlerRegistry {
             return null;
         }
         return normalizeExtension(name.substring(dot + 1));
+    }
+
+    /**
+     * @param filePath A file path, or {@code null}.
+     * @return Whether the file is a TypeScript declaration file ({@code *.d.ts}).
+     */
+    public static boolean isTypeScriptDeclaration(@Nullable Path filePath) {
+        if (filePath == null) {
+            return false;
+        }
+        Path fileName = filePath.getFileName();
+        return fileName != null && isTypeScriptDeclarationName(fileName.toString());
+    }
+
+    /**
+     * @param fileName A file name, or {@code null}.
+     * @return Whether the name ends in {@code .d.ts}, in any case.
+     */
+    public static boolean isTypeScriptDeclarationName(@Nullable String fileName) {
+        return fileName != null && fileName.toLowerCase(Locale.ROOT).endsWith(".d.ts");
     }
 
 }

@@ -39,6 +39,16 @@ item.items.integratedscriptingcallback.scripting_disk.name=脚本磁盘
 item.items.integratedscriptingcallback.scripting_disk.info=存储脚本。
 item.integratedscripting.scripting_disk.id=ID: %s
 item.integratedscripting.scripting_disk.bytes=字节: %s
+item.items.integratedscriptingcallback.refresher.name=网络刷新器
+item.items.integratedscriptingcallback.refresher.info=右键显示器或线缆，刷新整个网络。
+item.integratedscripting.refresher.tooltip.network=右键显示器或线缆：刷新整个网络
+item.integratedscripting.refresher.tooltip.detail=清除网络崩溃状态、重新校验变量并强制显示器同步
+
+# 网络刷新器
+networkrefresher.integratedscripting.network_refreshed=已刷新网络：%s 个部件，其中 %s 个显示器
+networkrefresher.integratedscripting.network_refreshed_crashed=已清除网络崩溃状态并刷新网络：%s 个部件，其中 %s 个显示器
+networkrefresher.integratedscripting.error.no_network=这里没有连接到动态联合网络。
+networkrefresher.integratedscripting.error.failed=刷新失败，请查看游戏日志。
 
 # 图形界面
 gui.integratedscripting.disk=磁盘
@@ -85,6 +95,7 @@ script.integratedscripting.error.invalid_type=磁盘 %3$s 上脚本“%2$s”中
 script.integratedscripting.error.no_scripting_data=此侧无法获取脚本数据。
 script.integratedscripting.error.script_invalidated=磁盘 %2$s 上的已编译脚本“%1$s”因文件发生更改而被释放。请再次求值该变量以重新编译。
 script.integratedscripting.error.runtime_missing=未安装 JavaScript 运行时（%s）。请安装配套模组 integratedscriptingcallbacklibs。
+script.integratedscripting.error.typescript_compile=无法编译磁盘 %2$s 上的 TypeScript 脚本“%1$s”（第 %3$s 行第 %4$s 列，%5$s）：%6$s
 
 # ------ 《论动态联合》手册内容 ------
 
@@ -129,6 +140,11 @@ info_book.integratedscripting.terminal.text9=为此，请先在文本编辑器�
 info_book.integratedscripting.terminal.text10=然后，将一张 &l变量卡&r 插入屏幕右侧的槽位，即可将其绑定到这个脚本成员。
 info_book.integratedscripting.terminal.text11=这张 &l变量卡&r 现在就可以在网络的其他地方使用了，例如在 &l显示器&r 中显示变量成员，或将函数成员用作物品列表过滤器中的运算符。
 info_book.integratedscripting.terminal.text12=下一章将详细介绍如何编写脚本。
+
+info_book.integratedscripting.refresher=网络刷新器
+info_book.integratedscripting.refresher.text1=&l网络刷新器&r 是一个手持调试工具，用来修复动态联合里很常见的两类问题：网络报错停摆，以及显示器显示不同步。
+info_book.integratedscripting.refresher.text2=右键 &l显示器面板&r 或 &l线缆&r 都会刷新整个网络：清除网络的崩溃状态、重新校验所有部件、重算所有显示器并强制它们同步。刷新不针对单个显示器。
+info_book.integratedscripting.refresher.text3=刷新是“软刷新”，不会拆方块或重建线缆拓扑；点击普通方块不会触发，点击线缆上的任何部件都会刷新整个网络。
 
 info_book.integratedscripting.writing=编写脚本
 
@@ -220,3 +236,24 @@ info_book.integratedscripting.tutorials.functions.text4=具体来说，我们将
 info_book.integratedscripting.tutorials.functions.text5=本教程中，你可以自由选择过滤函数的任何实现方式。下面给出一个有效的示例脚本，你可以随意复制。
 info_book.integratedscripting.tutorials.functions.text6=要完成本教程，请在 &l显示器&r 中显示过滤后列表的结果。
 info_book.integratedscripting.tutorials.functions.text7=在这个示例脚本中，你会看到可以调用物品上的内置方法，例如 &ostackable()&r 和 &osize()&r。关于有哪些可用方法的更多细节，可在后面的完整手册中找到。
+
+# 寻址内存器
+tile.blocks.integratedscriptingcallback.addressed_memory.name=寻址内存器
+tile.blocks.integratedscriptingcallback.addressed_memory.info=为网络与脚本保存十六个可按地址读写的变量。
+valuetype.valuetypes.integratedscriptingcallback.addressed_memory.name=寻址内存器
+operator.operators.integratedscriptingcallback.addressed_memory.basename=寻址内存器 %s
+operator.operators.integratedscriptingcallback.addressed_memory.get.name=读取内存
+operator.operators.integratedscriptingcallback.addressed_memory.get.info=读取指定内存地址上保存的值。
+operator.operators.integratedscriptingcallback.addressed_memory.set.name=写入内存
+operator.operators.integratedscriptingcallback.addressed_memory.set.info=把值写入指定内存地址并返回该值。
+gui.integratedscripting.addressed_memory.position=坐标：%s, %s, %s（维度 %s）
+gui.integratedscripting.addressed_memory.address=地址 %s
+gui.integratedscripting.addressed_memory.error=错误：%s
+gui.integratedscripting.addressed_memory.empty=空
+addressedmemory.integratedscripting.error.address_invalid=无效的内存地址“%s”。请使用字母 a 到 p。
+addressedmemory.integratedscripting.error.address_empty=内存地址“%s”中没有值。
+addressedmemory.integratedscripting.error.memory_missing=这个寻址内存器方块已经不存在了。
+addressedmemory.integratedscripting.error.unserializable_value=类型为 %2$s 的值无法保存到内存地址“%1$s”。
+addressedmemory.integratedscripting.error.invalid_type=寻址内存器不能提供类型为“%1$s”的值，它产出的是“%2$s”。
+addressedmemory.integratedscripting.error.client_side=寻址内存器只能在服务端写入；客户端求值无法保存值。
+addressedmemory.integratedscripting.error.wrong_thread=寻址内存器被非服务端线程写入，已拒绝以免破坏数据。

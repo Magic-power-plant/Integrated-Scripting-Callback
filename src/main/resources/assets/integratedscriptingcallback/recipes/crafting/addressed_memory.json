@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " M ",
+    "MVM",
+    " D "
+  ],
+  "key": {
+    "M": {
+      "item": "integratedscriptingcallback:mendesite",
+      "data": 0
+    },
+    "V": {
+      "item": "integrateddynamics:variablestore",
+      "data": 0
+    },
+    "D": {
+      "item": "integratedscriptingcallback:scripting_drive",
+      "data": 0
+    }
+  },
+  "result": {
+    "item": "integratedscriptingcallback:addressed_memory",
+    "data": 0
+  }
+}

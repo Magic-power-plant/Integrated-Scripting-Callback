@@ -27,6 +27,12 @@ public final class LanguageId implements Comparable<LanguageId> {
     /** The built-in JavaScript language. */
     public static final LanguageId JAVASCRIPT = LanguageId.of(DEFAULT_NAMESPACE, "javascript");
 
+    /**
+     * The built-in TypeScript language: a {@code .ts} script is compiled to
+     * JavaScript before it is evaluated.
+     */
+    public static final LanguageId TYPESCRIPT = LanguageId.of(DEFAULT_NAMESPACE, "typescript");
+
     /** Fallback language used when a file has no registered handler. */
     public static final LanguageId PLAIN_TEXT = LanguageId.of(DEFAULT_NAMESPACE, "plaintext");
 

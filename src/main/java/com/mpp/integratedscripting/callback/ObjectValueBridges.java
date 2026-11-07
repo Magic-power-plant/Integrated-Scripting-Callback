@@ -37,6 +37,17 @@ public final class ObjectValueBridges {
     }
 
     /**
+     * Register a bridge for an object value type that is added after this class
+     * was initialised, such as the addressed memory type of this mod.
+     * @param valueType The object value type.
+     * @param bridge Its bridge.
+     * @param <V> The value type.
+     */
+    public static <V extends IValue> void register(ValueObjectTypeBase<V> valueType, IObjectValueBridge<V> bridge) {
+        BRIDGES.put(valueType, bridge);
+    }
+
+    /**
      * @return An unmodifiable view of the registered bridges, for diagnostics.
      */
     public static Map<IValueType<?>, IObjectValueBridge<?>> getBridges() {

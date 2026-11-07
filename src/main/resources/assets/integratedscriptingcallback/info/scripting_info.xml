@@ -55,6 +55,13 @@
         <appendix type="crafting_recipe"><item>integratedscriptingcallback:part_terminal_scripting_item</item></appendix>
     </section>
 
+    <section name="info_book.integratedscripting.refresher">
+        <paragraph>info_book.integratedscripting.refresher.text1</paragraph>
+        <paragraph>info_book.integratedscripting.refresher.text2</paragraph>
+        <paragraph>info_book.integratedscripting.refresher.text3</paragraph>
+        <appendix type="crafting_recipe"><item>integratedscriptingcallback:refresher</item></appendix>
+    </section>
+
     <section name="info_book.integratedscripting.writing">
         <section name="info_book.integratedscripting.writing.js">
             <paragraph>info_book.integratedscripting.writing.js.text1</paragraph>

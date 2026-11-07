@@ -1,9 +1,11 @@
 package com.mpp.integratedscripting.core.network;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
+import org.cyclops.cyclopscore.datastructure.DimPos;
 import org.cyclops.cyclopscore.helper.L10NHelpers;
 import org.cyclops.integrateddynamics.api.evaluate.EvaluationException;
 import org.cyclops.integrateddynamics.api.evaluate.variable.IValue;
@@ -20,6 +22,7 @@ import com.mpp.integratedscripting.evaluate.ScriptRuntime;
 import javax.annotation.Nullable;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,6 +40,7 @@ import java.util.Set;
 public class ScriptingNetwork implements IScriptingNetwork {
 
     private final Set<Integer> disks = Sets.newHashSet();
+    private final Map<String, DimPos> memories = Maps.newLinkedHashMap();
     private final Map<Pair<Integer, Path>, IScript> scriptCache = Maps.newHashMap();
     private final Map<Triple<Integer, Path, String>, ScriptVariable> variableCache = Maps.newHashMap();
     @Nullable
@@ -68,6 +72,48 @@ public class ScriptingNetwork implements IScriptingNetwork {
         return Collections.unmodifiableSet(this.disks);
     }
 
+    @Override
+    public void addMemory(String name, DimPos position) {
+        if (name == null || position == null) {
+            return;
+        }
+        if (!position.equals(this.memories.put(name, position))) {
+            // A new memory changes what a script can see, so drop compiled scripts:
+            // their sandbox was built with the previous set of memory bindings.
+            invalidateScripts();
+        }
+    }
+
+    @Override
+    public void removeMemory(String name) {
+        if (name != null && this.memories.remove(name) != null) {
+            invalidateScripts();
+        }
+    }
+
+    @Override
+    public Map<String, DimPos> getMemories() {
+        return Collections.unmodifiableMap(this.memories);
+    }
+
+    /**
+     * Drop every compiled script of this network, because its bindings changed.
+     */
+    protected void invalidateScripts() {
+        List<IScript> scripts = Lists.newArrayList(this.scriptCache.values());
+        this.scriptCache.clear();
+        for (IScript script : scripts) {
+            try {
+                script.release();
+            } catch (RuntimeException e) {
+                // Never let cache invalidation break joining a network.
+                com.mpp.IntegratedScriptingCallback.clog(org.apache.logging.log4j.Level.WARN,
+                        "Could not release a compiled script: " + e);
+            }
+        }
+        postVariableContentsUpdated();
+    }
+
     @Nullable
     @Override
     public IScript getScript(int disk, Path path) throws EvaluationException {
@@ -93,7 +139,9 @@ public class ScriptingNetwork implements IScriptingNetwork {
                         "script.integratedscripting.error.unsupported_language", path.toString()));
             }
             IScriptFactory scriptFactory = languageHandler.getScriptFactory();
-            script = scriptFactory.getScript(disk, path);
+            // The memories of this network are part of the script's bindings, so a
+            // script compiled here can reach the memory cards of its network.
+            script = scriptFactory.getScript(disk, path, Collections.unmodifiableMap(this.memories));
             if (script != null) {
                 final IScript cachedScript = script;
                 script.addInvalidationListener(() -> {

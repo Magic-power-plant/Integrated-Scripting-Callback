@@ -1,11 +1,13 @@
 package com.mpp.integratedscripting.api.network;
 
+import org.cyclops.cyclopscore.datastructure.DimPos;
 import org.cyclops.integrateddynamics.api.evaluate.EvaluationException;
 import org.cyclops.integrateddynamics.api.evaluate.variable.IValue;
 import org.cyclops.integrateddynamics.api.evaluate.variable.IVariable;
 
 import javax.annotation.Nullable;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -56,5 +58,28 @@ public interface IScriptingNetwork {
      * @return A variable.
      */
     public <V extends IValue> IVariable<V> getVariable(int disk, Path path, String member);
+
+    /**
+     * Indicate that the given addressed memory block is part of this network.
+     *
+     * <p>Memories are announced here so that scripts compiled in this network can
+     * receive them as object values (the value of their memory card), on which the
+     * {@code get} and {@code set} operators are available as methods.</p>
+     *
+     * @param name The stable name of the memory, as returned by the tile entity.
+     * @param position The position of the memory block.
+     */
+    public void addMemory(String name, DimPos position);
+
+    /**
+     * Indicate that the given addressed memory block is no longer part of this network.
+     * @param name The stable name of the memory.
+     */
+    public void removeMemory(String name);
+
+    /**
+     * @return The addressed memories of this network, keyed by their stable name.
+     */
+    public Map<String, DimPos> getMemories();
 
 }

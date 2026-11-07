@@ -8,6 +8,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.commons.lang3.tuple.Pair;
 import com.mpp.GeneralConfig;
 import com.mpp.integratedscripting.api.network.IScriptingData;
+import com.mpp.integratedscripting.core.language.LanguageHandlerRegistry;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -206,7 +207,7 @@ public class ScriptingData implements IScriptingData {
         if (Files.isDirectory(diskDir)) {
             try (Stream<Path> stream = Files.walk(diskDir)) {
                 stream.filter(Files::isRegularFile)
-                        .filter(file -> !isTemporaryFile(file))
+                        .filter(ScriptingData::isScriptFile)
                         .forEach(file -> {
                             Path filePathRelative = diskDir.relativize(file);
                             try {
@@ -220,6 +221,14 @@ public class ScriptingData implements IScriptingData {
             }
         }
         this.setScripts(diskId, scripts, ChangeLocation.DISK);
+    }
+
+    /**
+     * @param file A file inside a disk directory.
+     * @return If the file is something this mod treats as a script.
+     */
+    protected static boolean isScriptFile(Path file) {
+        return !isTemporaryFile(file) && !LanguageHandlerRegistry.isTypeScriptDeclaration(file);
     }
 
     /**

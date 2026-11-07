@@ -11,6 +11,8 @@ import com.mpp.integratedscripting.evaluate.translation.translator.ValueTranslat
 import com.mpp.integratedscripting.evaluate.translation.translator.ValueTranslatorObjectAdapter;
 import com.mpp.integratedscripting.evaluate.translation.translator.ValueTranslatorOperator;
 import com.mpp.integratedscripting.evaluate.translation.translator.ValueTranslatorString;
+import com.mpp.integratedscripting.core.evaluate.value.AddressedMemoryValues;
+import com.mpp.integratedscripting.core.evaluate.value.ValueTypeAddressedMemory;
 import com.mpp.IntegratedScriptingCallback;
 import net.minecraftforge.common.MinecraftForge;
 import org.cyclops.cyclopscore.helper.MinecraftHelpers;
@@ -72,6 +74,12 @@ public class ValueTranslators {
         REGISTRY.register(new ValueTranslatorObjectAdapter<>("id_fluid", ValueTypes.OBJECT_FLUIDSTACK));
         REGISTRY.register(new ValueTranslatorObjectAdapter<>("id_ingredients", ValueTypes.OBJECT_INGREDIENTS));
         REGISTRY.register(new ValueTranslatorObjectAdapter<>("id_recipe", ValueTypes.OBJECT_RECIPE));
+        // The addressed memory object type of this mod (preInit), so scripts can hold
+        // a memory and call its get/set methods.
+        ValueTypeAddressedMemory addressedMemory = AddressedMemoryValues.getTypeOrNull();
+        if (addressedMemory != null) {
+            REGISTRY.register(new ValueTranslatorObjectAdapter<>("id_memory", addressedMemory));
+        }
 
         // Allow other mods to register translators (§5.10).
         if (MinecraftHelpers.isModdedEnvironment()) {

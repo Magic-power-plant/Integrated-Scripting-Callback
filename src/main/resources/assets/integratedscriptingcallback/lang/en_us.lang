@@ -39,6 +39,16 @@ item.items.integratedscriptingcallback.scripting_disk.name=Scripting Disk
 item.items.integratedscriptingcallback.scripting_disk.info=Store scripts.
 item.integratedscripting.scripting_disk.id=ID: %s
 item.integratedscripting.scripting_disk.bytes=Bytes: %s
+item.items.integratedscriptingcallback.refresher.name=Network Refresher
+item.items.integratedscriptingcallback.refresher.info=Right-click a Display Panel or a cable to refresh the whole network.
+item.integratedscripting.refresher.tooltip.network=Right-click a Display Panel or a cable: refresh the whole network
+item.integratedscripting.refresher.tooltip.detail=Clears the crashed state, re-validates variables and forces displays to resync
+
+# Network refresher
+networkrefresher.integratedscripting.network_refreshed=Refreshed the network: %s parts, %s of them displays
+networkrefresher.integratedscripting.network_refreshed_crashed=Cleared the network's crashed state and refreshed it: %s parts, %s of them displays
+networkrefresher.integratedscripting.error.no_network=There is no Integrated Dynamics network connected here.
+networkrefresher.integratedscripting.error.failed=The refresh failed; see the game log for details.
 
 # Gui
 gui.integratedscripting.disk=Disk
@@ -85,6 +95,7 @@ script.integratedscripting.error.invalid_type=Script member "%1$s" in script "%2
 script.integratedscripting.error.no_scripting_data=Scripting data is not available on this side.
 script.integratedscripting.error.script_invalidated=The compiled script "%s" on disk %s was released because the file changed. Recompile it by evaluating the variable again.
 script.integratedscripting.error.runtime_missing=The JavaScript runtime is not installed (%s). Install the companion mod integratedscriptingcallbacklibs.
+script.integratedscripting.error.typescript_compile=The TypeScript script "%s" on disk %s could not be compiled (line %s, column %s, %s): %s
 
 # ------ On the Dynamics of Integration contents ------
 
@@ -129,6 +140,11 @@ info_book.integratedscripting.terminal.text9=You can do this by first selecting 
 info_book.integratedscripting.terminal.text10=After that, you can insert a &lVariable Card&r into the slot on the right-hand side of the screen to bind it to this script member.
 info_book.integratedscripting.terminal.text11=This &lVariable Card&r can now be used elsewhere in the network, by for example showing a variable member inside a &lDisplay Panel&r, or by using a function member as operator in an item list filter.
 info_book.integratedscripting.terminal.text12=The next chapter will provide more details on how to write scripts.
+
+info_book.integratedscripting.refresher=Network Refresher
+info_book.integratedscripting.refresher.text1=The &lNetwork Refresher&r is a handheld debugging tool for two common Integrated Dynamics problems: a crashed network and a desynchronized Display Panel.
+info_book.integratedscripting.refresher.text2=Right-click a &lDisplay Panel&r or a &lcable&r to refresh the whole network: the crashed state is cleared, every part is re-validated and all panels are recomputed and forced to resync. There is no single-display refresh mode.
+info_book.integratedscripting.refresher.text3=This is a soft refresh: it does not break blocks or rebuild the cable topology. Non-cable blocks are not intercepted, while clicking any part on a cable refreshes the whole network.
 
 info_book.integratedscripting.writing=Writing Scripts
 
@@ -220,3 +236,24 @@ info_book.integratedscripting.tutorials.functions.text4=Concretely, we will read
 info_book.integratedscripting.tutorials.functions.text5=You are free to use any implementation of the filter function for this tutorial. Hereafter, you can find a valid example script which you are free to copy.
 info_book.integratedscripting.tutorials.functions.text6=To complete the tutorial, show the result of the filtered list in a &lDisplay Panel&r.
 info_book.integratedscripting.tutorials.functions.text7=In this example script, you will see that you can invoke built-in methods on items such as &ostackable()&r and &osize()&r. More details on which methods are available can be found later in the full manual.
+
+# Addressed memory
+tile.blocks.integratedscriptingcallback.addressed_memory.name=Addressed Memory
+tile.blocks.integratedscriptingcallback.addressed_memory.info=Store sixteen addressable variables for the network and its scripts.
+valuetype.valuetypes.integratedscriptingcallback.addressed_memory.name=Addressed Memory
+operator.operators.integratedscriptingcallback.addressed_memory.basename=Addressed Memory %s
+operator.operators.integratedscriptingcallback.addressed_memory.get.name=Memory Get
+operator.operators.integratedscriptingcallback.addressed_memory.get.info=Read the value that the given memory address holds.
+operator.operators.integratedscriptingcallback.addressed_memory.set.name=Memory Set
+operator.operators.integratedscriptingcallback.addressed_memory.set.info=Write a value to the given memory address and return it.
+gui.integratedscripting.addressed_memory.position=Position: %s, %s, %s (dimension %s)
+gui.integratedscripting.addressed_memory.address=Address %s
+gui.integratedscripting.addressed_memory.error=Error: %s
+gui.integratedscripting.addressed_memory.empty=Empty
+addressedmemory.integratedscripting.error.address_invalid=Invalid memory address "%s". Use the letters a to p.
+addressedmemory.integratedscripting.error.address_empty=Memory address "%s" does not contain a value.
+addressedmemory.integratedscripting.error.memory_missing=The addressed memory block no longer exists.
+addressedmemory.integratedscripting.error.unserializable_value=A value of type %2$s can not be stored in memory address "%1$s".
+addressedmemory.integratedscripting.error.invalid_type=An addressed memory can not supply a value of type "%1$s"; it produces "%2$s".
+addressedmemory.integratedscripting.error.client_side=The addressed memory can only be written on the server side; a client-side evaluation can not store values.
+addressedmemory.integratedscripting.error.wrong_thread=The addressed memory was written from a thread that is not the server thread.

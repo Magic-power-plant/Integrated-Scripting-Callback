@@ -325,6 +325,33 @@ public class ScriptingDataTest {
         assertTrue(data.getDirtyPaths().hasNext());
     }
 
+    /**
+     * A {@code *.d.ts} declaration file is not a script: the terminal would
+     * otherwise list it, sync it to the client and try to evaluate it, and the
+     * TypeScript language would claim it because its last extension is {@code ts}
+     * (docs/TYPESCRIPT-FEASIBILITY.md §4.5).
+     */
+    @Test
+    public void testDeclarationFilesAreNotLoadedAsScripts() throws IOException {
+        ScriptingData data = newData();
+        Path disk = diskPath(data, 1);
+        Files.createDirectories(disk);
+        Files.write(disk.resolve("main.ts"), "const a: number = 1;".getBytes(StandardCharsets.UTF_8));
+        Files.write(disk.resolve("types.d.ts"), "export declare const b: number;".getBytes(StandardCharsets.UTF_8));
+        Files.write(disk.resolve("notes.txt"), "not a script, but still a file".getBytes(StandardCharsets.UTF_8));
+        data.initialize();
+        try {
+            assertTrue(data.getScripts(1).containsKey(java.nio.file.Paths.get("main.ts")));
+            assertTrue(data.getScripts(1).containsKey(java.nio.file.Paths.get("notes.txt")));
+            assertFalse("A declaration file must not become a script",
+                    data.getScripts(1).containsKey(java.nio.file.Paths.get("types.d.ts")));
+            // The file itself is left alone: this filter only decides what is read.
+            assertTrue(Files.exists(disk.resolve("types.d.ts")));
+        } finally {
+            data.close();
+        }
+    }
+
     private static void awaitCondition(Condition condition) throws InterruptedException {
         assertTrue("Timed out waiting for condition", awaitCondition(condition, AWAIT_TIMEOUT_MS));
     }

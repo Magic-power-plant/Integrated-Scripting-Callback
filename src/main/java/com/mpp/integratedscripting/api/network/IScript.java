@@ -47,6 +47,18 @@ public interface IScript {
      */
     public void removeInvalidationListeners();
 
+    /**
+     * Release this compiled script and its runtime resources.
+     *
+     * <p>The scripting network calls this when the bindings of the network
+     * changed (for example because an addressed memory was added or removed), so
+     * the next evaluation compiles a fresh script with the new bindings. The
+     * default is a no-op for implementations that hold nothing releasable.</p>
+     */
+    public default void release() {
+        // Nothing to release by default.
+    }
+
     public interface IInvalidateListener {
 
         /**

@@ -1,6 +1,6 @@
 # 集成脚本：回调 · Integrated Scripting Callback
 
-**Minecraft 1.12.2 · Forge · MIT** —— 给《动态联合》（Integrated Dynamics）加上写代码的能力：**在网络里直接写 JavaScript**。
+**Minecraft 1.12.2 · Forge · MIT** —— 给《动态联合》（Integrated Dynamics）加上写代码的能力：**在网络里直接写 JavaScript / TypeScript**。
 
 ![脚本终端](terminal-editor.png)
 
@@ -23,6 +23,7 @@
 - [脚本怎么写](#脚本怎么写)
 - [更多示例](#更多示例)
 - [脚本文件在哪里（外部编辑）](#脚本文件在哪里外部编辑)
+- [TypeScript 支持](#typescript-支持)
 - [配置项](#配置项)
 - [命令](#命令)
 - [常见问题](#常见问题)
@@ -44,9 +45,12 @@
 - 动态联合的**全部值类型双向互通**：整数、长整数、浮点、布尔、字符串、列表、NBT、物品、方块、流体……
 - `idContext.ops` 里能调用全部内置运算符（本版本实测 233 个全局运算符 + 13 组对象方法）
 - 文件直接落在存档目录，**可以用外部编辑器改**，存盘后游戏里自动热重载
-- 自动生成 TypeScript 类型声明 `.d.ts`，在外部 IDE 里写脚本有补全
+- **TypeScript 也能直接在游戏里跑**：`.ts` 脚本在求值时编译成 JavaScript 再执行，类型注解、`interface`、泛型、`enum` 都照写，详见[TypeScript 支持](#typescript-支持)
+- 自动生成 TypeScript 类型声明 `.d.ts`：`idContext.ops` 与各对象方法都有参数/返回类型，NBT、列表元素、运算符值和对象值的形状都是真实类型，外部 IDE 里写脚本有补全和检查
 - `console.log()` / `console.error()` 输出到脚本旁边的 `.stdout` / `.stderr` 文件
 - 附带《论动态联合》信息书的「脚本」章节与「脚本教程」章节，配 7 个进度（外加一个隐藏的起始进度）
+- **寻址内存器**方块：16 个按地址（`a`–`p`）读写的变量，脚本里用 `内存器变量卡.get("a")` / `.set("a", 42)` 访问
+- **网络刷新器**物品：右键显示器或线缆刷新整个网络（清除崩溃标记、重算变量并强制客户端同步），用来修“网络报错 / 显示器不同步”
 
 ## 环境要求
 
@@ -58,25 +62,23 @@
 | 动态联合 Integrated Dynamics | 1.12.2 版（开发与测试基于 1.1.11）**必需** |
 | CyclopsCore | 1.12.2-1.6.7 **必需**（动态联合自带依赖） |
 | CommonCapabilities | 1.12.2-2.x **必需**（动态联合自带依赖） |
-| **Integrated Scripting Callback Libs** | **必需**，见下 |
+| JavaScript 运行时（GraalVM JS 21.3.0） | **已打进发布 jar**，不用另装，见下 |
 
-### 关于配套库模组 `integratedscriptingcallbacklibs`
+### 关于 JavaScript 运行时
 
-JavaScript 运行时（GraalVM JS 21.3.0）**不在本模组里**，而是由配套的库模组 `integratedscriptingcallbacklibs` 提供，两个 jar 要一起放进 `mods/`。
+JavaScript 运行时（GraalVM JS 21.3.0，含 Truffle、ICU）**已经打进发布 jar 里**，`mods/` 只放一个 `Integrated-Scripting-Callback-1.12.2-<版本>.jar` 就能跑脚本，不再需要配套的库模组。
 
-没装库模组时：游戏能正常启动，方块、物品、终端界面都在，但**执行脚本会报错**：
-
-> 未安装 JavaScript 运行时（…）。请安装配套模组 integratedscriptingcallbacklibs。
-
-**客户端与服务端都必须安装**：客户端要跑终端界面，服务端要编译和执行脚本。
+- 构建时由 Gradle Shadow 插件把依赖直接打进 jar（做法与取舍见 [`docs/PORTING-1.12.2.md`](docs/PORTING-1.12.2.md) §3.4）：`./gradlew build` 产出的**无分类 jar 就是自带运行时的发布版**，体积较大是正常的（约 27 MB，压缩后）。
+- 同目录还有一个 `-slim.jar`：**只含本模组**的瘦身版，给"多装一个库模组"的分发方式用。用瘦身版就必须再装 `integratedscriptingcallbacklibs`，否则游戏能正常启动、方块物品界面都在，但**执行脚本会报错**：
+  > 未安装 JavaScript 运行时（…）。请安装配套模组 integratedscriptingcallbacklibs。
+- **客户端与服务端都必须装**：客户端要跑终端界面，服务端要编译和执行脚本。
 
 ## 安装
 
 1. 装好 Forge 1.12.2 与 Java 8（客户端 + 服务端）
 2. 把以下 jar 放进 `mods/`：
    - 动态联合 + CyclopsCore + CommonCapabilities
-   - `Integrated-Scripting-Callback-1.12.2-<版本>.jar`（本模组）
-   - `integratedscriptingcallbacklibs-<版本>.jar`（运行时库）
+   - `Integrated-Scripting-Callback-1.12.2-<版本>.jar`（本模组，**已自带 JavaScript 运行时**）
 3. 启动一次游戏生成配置：`config/integratedscriptingcallback.cfg`
 
 > 单人存档与服务器要装同一套；多人服务器只让玩家装客户端是不够的。
@@ -130,7 +132,9 @@ const myVar = 123;
 | **门山石** | 烘干池：1 安山岩（`minecraft:stone`，meta 5）+ 1000 mB 门瑞欧树脂 → 1 门山石 |
 | **脚本磁盘 ×8** | 4 变量卡（十字形）+ 1 门山石 |
 | **脚本驱动器** | 3 脚本磁盘 + 1 变量卡箱 + 1 唱片机 |
+| **寻址内存器** | 3 门山石 + 1 变量卡箱 + 1 脚本驱动器（摆法：`M`/`MVM`/`D`，M=门山石，V=变量卡箱，D=脚本驱动器） |
 | **脚本终端**（部件） | 4 红石粉 + 1 门山石 + 1 变量输出 + 1 变量输入 + 1 显示器 |
+| **网络刷新器** | 3 门山石 + 1 变量卡 + 1 红石粉（摆法：`M`/`MVM`/`R`，M=门山石，V=变量卡，R=红石粉） |
 
 具体摆法看 NEI / JEI，或者翻开游戏内的《论动态联合》→「动态联合手册」→「脚本」章节，里面有配方附录和截图（教程在「教程」→「脚本教程」）：
 
@@ -196,6 +200,47 @@ const myVar = 123;
 > - 磁盘可以换到别的驱动器、别的网络位置 —— 只要**同一网络内**，绑定依然有效
 > - 但**重命名、移动或删除脚本文件**，已绑定的变量卡就会失效并开始报错
 > - 磁盘拿到新 ID（比如把磁盘 NBT 清掉）也会让旧卡失效
+
+## 寻址内存器
+
+**寻址内存器**（`addressed_memory`）是一个接入网络的方块，**自己存储 16 个变量**，按地址读写：
+
+- 地址是字母 **`a` 到 `p`**，**默认都是整数 `0`**；每个地址槽上方的文本框显示该地址**存储值**的类型，悬停可以看到值
+- 左上角单独的槽是「整个内存器的变量卡」：放进一张空的变量卡，方块会把它写成 `addressed_memory` 类型的静态值卡（带值类型叠加外观），取出后可以在逻辑编程器/显示器里当内存器用
+- 地址槽是**输出**：槽里的变量卡由内存器填写成「该地址的值」的静态变量卡（类型叠加外观按值类型显示，默认就是整数卡），可以取出用在网络其他地方；`set` 会同步更新这张卡。取走卡不会清掉地址里的值
+- **内存器长期记住每个地址卡片的变量 id**：卡片被取走或换掉后，网络里按这个 id 引用它的变量（运算符卡、代理卡等）仍然解析到该地址当前的值，并跟着 `set` 更新
+- `get` / `set` 只作用于内存器自身的存储，不会去引用或求值卡里的变量
+
+在脚本里可以这样用：
+
+```js
+// 网络里只有一个内存器时
+const a = 内存器变量卡.get("a");     // 读取 a
+内存器变量卡.set("a", 42);           // 写入 a（内存器自己保存这个值）
+
+// 多个内存器时按名字取（名字由坐标决定）
+idContext.memories["addressed_memory_9_71_8"].get("b")
+idContext.memories[0].set("b", 1)
+```
+
+也可以用全局运算符函数：`idContext.ops.addressedMemoryGet(memory, "a")`、`idContext.ops.addressedMemorySet(memory, "a", 42)`。
+类型声明文件里同样有 `ValueAddressed_memory` 接口与 `get` / `set` 方法。
+
+细节与验收方式见 [`docs/ADDRESSED-MEMORY.md`](docs/ADDRESSED-MEMORY.md)。
+
+## 网络刷新器
+
+**网络刷新器**（`refresher`）是一个手持调试工具，用来修 1.12.2 里两类很常见的问题：**网络报错停摆**，和**显示器显示不同步**。
+
+| 操作 | 效果 |
+|---|---|
+| 右键**显示器或线缆** | 刷新整个网络：清除网络的 `crashed` 标记、广播 `VariableContentsUpdatedEvent`、重新校验网络里所有部件、重算所有显示器，并强制它们同步 |
+
+刷新是**整网操作**，没有单独的“只刷新这一块显示器”模式。它不会拆方块，也不会重建线缆拓扑；点击非线缆方块不会触发。
+
+> 典型用法：外部编辑器改完脚本后显示器还是旧值 → 右键一下显示器；某个网络突然所有部件都不动了 → 右键一下网络里任意线缆。
+
+细节与验收方式见 [`docs/NETWORK-REFRESHER.md`](docs/NETWORK-REFRESHER.md)。
 
 ## 脚本怎么写
 
@@ -401,10 +446,41 @@ saves/<世界名>/integratedscriptingcallback/
 ```
 
 - 服务器上是 `<服务器目录>/world/integratedscriptingcallback/`
-- 脚本文件 UTF-8 编码，扩展名 `.js` / `.cjs` / `.mjs`
+- 脚本文件 UTF-8 编码，扩展名 `.js` / `.cjs` / `.mjs` / `.ts`
 - **游戏运行时也可以改**：外部保存后，游戏会自动检测到变化、重新加载，依赖该脚本的变量卡会刷新
 - 反过来也成立：在终端里改脚本，外部编辑器（支持自动重载的）里也会跟着变
-- `.d.ts` 每次开服/开档都会重新生成，**不要手改**
+- `.d.ts` 每次开服/开档都会重新生成，**不要手改**；它只是给 IDE 看的类型声明，**不会被当成脚本**（放进磁盘目录也不会出现在终端列表里）
+
+## TypeScript 支持
+
+`.ts` 是**一等脚本格式**：它和 `.js` 进同一个沙箱、同一套 `idContext`、同一套变量卡/运算符卡，区别只在于求值前会先做一次「TypeScript → JavaScript」的编译。
+
+```ts
+interface Item { size: number; stackable: boolean }
+enum Mode { Any, Stackable }
+
+class Filter {
+    constructor(public min: number) {}
+    matches(item: Item): boolean {
+        return item.stackable && item.size >= this.min;
+    }
+}
+
+const filter = new Filter(16);
+function pick(items: Item[]): Item[] {
+    return items.filter(filter.matches.bind(filter));
+}
+```
+
+- 编译器是 [Translanguage](https://github.com/pingsu/Translanguage)（纯 Java、零运行时依赖、MIT），**已打进发布 jar**，不需要 Node.js / `tsc`，游戏里也不需要额外装东西
+- 支持：类型注解、`interface` / `type` / `declare`、泛型与约束、`as` / `satisfies` / `<T>` / `!` 断言、`readonly` / `public` / `private` / `protected` / `abstract` / `override` / `implements`、构造函数参数属性、`enum` / `const enum`、可选链与空值合并、`import type` 擦除、`export` 声明（关键字会被去掉，声明本身留在全局作用域）
+- **不做类型检查**：类型只服务于 IDE（配合自动生成的 `.d.ts`）。写错类型游戏里不会报错，写错语法会
+- 生成的 `.d.ts` 是**全局声明**（脚本不能 `import`，类型直接写就行）：`idContext.ops` 的每个运算符都有真实签名；列表运算符用泛型表达元素类型（`listGet: <T>(list: T[], index: number) => T`）；NBT 是递归的 `NbtCompound` / `NbtValue`；运算符值是 `Operator`；6 个内置对象类型的 `id_*` 成员分别是 `BlockIdentity`、`ItemStackIdentity`、`FluidStackIdentity`、`EntityIdentity`、`IngredientsIdentity`、`RecipeIdentity`。其他模组注册的对象类型只要有 translator 也会生成接口，没有的退化成 `any`，不会引用不存在的类型
+- 不支持（会给出**带行号列号**的可读错误，不会静默失配）：值 `import` / 重导出（这个模组没有模块加载器，一个脚本就是一个裸全局脚本）、装饰器、运行时 `namespace`、JSX
+- 编译错误长这样：`无法编译磁盘 1 上的 TypeScript 脚本"main.ts"（第 3 行第 10 列，TS_SYNTAX）：Expected type`
+- `enum` 会被展开成多行，所以**含 `enum` 的脚本在运行时报的行号会偏移**（编译期错误不受影响）
+- 单文件上限 256 KiB（`typescriptMaxSourceLength`），超出直接报错；100 KB 的脚本编译约 90 ms
+- 用 `-slim.jar` 又没装库模组时，`.ts` 会退化成纯文本并打一条警告日志，`.js` 完全不受影响
 
 ## 配置项
 
@@ -419,6 +495,8 @@ saves/<世界名>/integratedscriptingcallback/
 | `graalStatementLimit` | `16384` | **单次求值**最多执行多少条语句，防止死循环；`-1` 关闭（不建议） |
 | `maxLogLines` | `2096` | `.stdout` / `.stderr` 的最大行数；`-1` 关闭限制 |
 | `nbtScalarWrapper` | `false` | 把标量 NBT 参数包成 `{ "value": … }` 而不是直接报错 |
+| `typescriptEnabled` | `true` | 是否把 `.ts` 注册为可执行脚本语言；关掉后 `.ts` 只是纯文本 |
+| `typescriptMaxSourceLength` | `262144` | 单个 `.ts` 脚本的最大字符数；`-1` 用内置的 256 KiB 上限 |
 
 **沙箱开关**（`graalAllow*`，默认全部危险项关闭，改动都要重启）：
 
@@ -453,7 +531,7 @@ saves/<世界名>/integratedscriptingcallback/
 ## 常见问题
 
 **装了但一执行脚本就说缺 JavaScript 运行时？**
-没装配套库模组 `integratedscriptingcallbacklibs`，或者只装在客户端。两个 jar 要同时进客户端和服务端的 `mods/`。
+说明你用的是 `-slim.jar`（瘦身版），而且没装配套库模组 `integratedscriptingcallbacklibs`，或者只装在客户端。**换成无分类的发布 jar 就不需要额外装库**；坚持用瘦身版的话，两个 jar 要同时进客户端和服务端的 `mods/`。
 
 **磁盘插进驱动器了，但没有 ID？**
 要**右键驱动器**打开它的小界面，把磁盘放进槽位 —— ID 是在放入的那一刻分配的，放进去后物品提示会出现 `ID: N`。ID 由存档的全局计数器发号，不会重复。
@@ -465,7 +543,7 @@ saves/<世界名>/integratedscriptingcallback/
 这是正常提示：脚本文件被改过，旧的编译结果已作废。让它再求值一次就好（重新插一下变量卡、或触发一次更新都行）。
 
 **改了脚本，显示器还是旧值？**
-保存到服务端有约 1 秒的间隔（`terminalScriptingClientSyncTickInterval`），重新看一次就好。
+保存到服务端有约 1 秒的间隔（`terminalScriptingClientSyncTickInterval`），重新看一次就好。如果超过几秒仍是旧值，用**网络刷新器**右键一下那块显示器或线缆（刷新整个网络）。
 
 **脚本里能不能读文件、发网络请求？**
 不能。默认沙箱禁掉 IO / 进程 / 线程 / native，只有数据访问是开的（见配置项）。
@@ -482,23 +560,30 @@ saves/<世界名>/integratedscriptingcallback/
 - 每次求值最多执行 `16384` 条语句（`graalStatementLimit`），超过就报错。它是防死循环的安全网，不要指望在里面跑长循环。
 - 变量状态（`let`）是**临时的**，随时可能重置。
 - **NBT 只支持复合标签**，标量需要开 `nbtScalarWrapper`。
-- 只支持 **JavaScript**（`.js` / `.cjs` / `.mjs`）。TypeScript 只提供 `.d.ts` 给外部编辑器，游戏里不编译 TS。
+- 支持 **JavaScript**（`.js` / `.cjs` / `.mjs`）与 **TypeScript**（`.ts`）。TypeScript 只做类型擦除与 `enum` 降级，**不做类型检查**，也不支持值 `import` / 重导出 / 装饰器 / 运行时 `namespace` / JSX（见[TypeScript 支持](#typescript-支持)）。
 - 没有 Node.js 的 `require` / `fs` 等能力。
 - 脚本日志文件（`.stdout` / `.stderr`）目前也会出现在终端的文件列表里，选中它们会提示语言不支持 —— 已知的界面小问题。
 - 编辑器不做语法检查、多光标或查找/替换面板；自动补全下拉框已支持（自动弹出、成员补全、鼠标点击、翻页），自动缩进按括号与上一行缩进推断，不解析 AST。
 - 纯客户端装本模组没有意义，逻辑全在服务端。
+- **寻址内存器**的地址是 `a`–`p`（16 个，与 GUI 的 16 个槽一致），没有 `q`；一个网络里有多个内存器时不再提供 `内存器变量卡` 全局，请用 `idContext.memories`。
+- 寻址内存器的 16 个地址**默认是整数 0**，没有“空地址”状态；类型框默认显示 `Integer`。
+- 寻址内存器的地址槽是**输出**：往已存值的地址槽插卡，卡会被内存器写出的静态值卡覆盖；卡被取走不会清掉地址里的值。理想外观是 ID 的“值类型贴图 + 变量卡贴图”，内存器卡用 `valuetypes/object` 图标，地址卡按值类型（默认 `valuetypes/integer`）。
+- `set` 是求值时写一次：显示器面板每次求值都会重新写；值没变化时不会重复持久化。`set` 只在服务端执行，客户端求值会被明确拒绝。
+- 寻址内存器会长期保留地址卡片的 id（每地址最近 8 个），卡被取走/换掉后按 id 引用仍然有效；但把同一张卡**挪进另一个内存器**时两个内存器都会认领该 id，属于有歧义的用法。
+- **网络刷新器**是“软刷新”：清缓存、重算、重发同步包，但**不重建线缆拓扑**；如果清掉崩溃标记后网络立刻又崩溃，说明有元素在持续报错，需要看日志定位。它只作用于整个网络，没有单显示器刷新模式。
 
 ## 致谢与许可
 
 - 原版 **Integrated Scripting**：© **rubensworks**（CyclopsMC），MIT 许可。<https://github.com/CyclopsMC/IntegratedScripting>
 - 1.12.2 移植与中文翻译：本仓库维护者。
 - 《动态联合》与 CyclopsCore：rubensworks 与 CyclopsMC 团队。
-- JavaScript 运行时：**GraalVM**（`graal-sdk`、`js` 21.3.0），Universal Permissive License 1.0，全文见 `LICENSE-graal.txt`。
+- JavaScript 运行时：**GraalVM**（`graal-sdk`、`js` 21.3.0），Universal Permissive License 1.0，全文见 `LICENSE-graal.txt`；该运行时已由 Gradle Shadow 打进发布 jar。
+- TypeScript 编译器：**Translanguage** 2.0.3-SNAPSHOT（`-java8` 副制品），MIT 许可，全文见 jar 内 `META-INF/Translanguage-LICENSE` 与 `META-INF/Translanguage-THIRD_PARTY_NOTICES.md`；该库同样已打进发布 jar。
 - 本仓库代码与素材：**MIT**，见 [LICENSE](LICENSE)。
 
 本模组是**非官方**移植，与 CyclopsMC 无隶属关系；原版的问题请勿报到上游。
 
-> 开发者：构建方式、移植决策与验收记录在 [`docs/PORTING-1.12.2.md`](docs/PORTING-1.12.2.md)、[`docs/MILESTONES.md`](docs/MILESTONES.md)、[`docs/AUDIT.md`](docs/AUDIT.md)；编辑器的设计与键位见 [`docs/EDITOR.md`](docs/EDITOR.md)；给模组加语言/补全能力的接入指南见 [`docs/LANGUAGE-API.md`](docs/LANGUAGE-API.md)。
+> 开发者：构建方式、移植决策与验收记录在 [`docs/PORTING-1.12.2.md`](docs/PORTING-1.12.2.md)、[`docs/MILESTONES.md`](docs/MILESTONES.md)、[`docs/AUDIT.md`](docs/AUDIT.md)；编辑器的设计与键位见 [`docs/EDITOR.md`](docs/EDITOR.md)；给模组加语言/补全能力的接入指南见 [`docs/LANGUAGE-API.md`](docs/LANGUAGE-API.md)；网络刷新器的设计见 [`docs/NETWORK-REFRESHER.md`](docs/NETWORK-REFRESHER.md)。
 
 ---
 
@@ -507,12 +592,12 @@ saves/<世界名>/integratedscriptingcallback/
 **Integrated Scripting Callback** is an unofficial **Minecraft 1.12.2 / Forge** port of
 [Integrated Scripting](https://github.com/CyclopsMC/IntegratedScripting) by rubensworks.
 
-Write **JavaScript** inside your Integrated Dynamics network:
+Write **JavaScript or TypeScript** inside your Integrated Dynamics network:
 
 - Craft **Mendesite** (drying basin: andesite + 1000 mB menril resin), then **Scripting Disks**,
   a **Scripting Drive** (exposes one disk to the network) and a **Scripting Terminal** (the in-game IDE).
 - Put a disk in a drive to give it a numeric **disk ID**; open the terminal on the same network to
-  create, edit and delete `.js` files on every exposed disk. The in-game editor follows CodeMirror's
+  create, edit and delete `.js` / `.ts` files on every exposed disk. The in-game editor follows CodeMirror's
   editing model: auto-indent, bracket/quote completion, undo/redo, line commands, matching-bracket
   and active-line highlighting, plus stateful highlighting across multi-line comments and template
   literals (see [`docs/EDITOR.md`](docs/EDITOR.md)).
@@ -523,14 +608,23 @@ Write **JavaScript** inside your Integrated Dynamics network:
 - Scripts live in `world/integratedscriptingcallback/scripting-disks/<id>/`, can be edited with an
   external editor while the game runs, and a `.d.ts` typings file plus `operator-bindings.log` are
   generated on every world start. `console.log()` goes to `<script>.stdout`.
+- A **Network Refresher** item repairs stale networks and desynced Display Panels: right-click a panel or a
+  cable to refresh the whole network (clear the crashed flag, re-validate every part and force a client resync).
+- A `.ts` script is **compiled to JavaScript inside the game** (Translanguage, shaded into the release
+  jar; no Node.js, no `tsc`) and then runs in the same sandbox as `.js`: types, `interface`, generics,
+  parameter properties and `enum` all work, `import type` is erased, and value imports / decorators /
+  runtime `namespace` / JSX are rejected with a line and column. No type checking is performed -
+  types are there for the IDE, through the generated `.d.ts`.
 
-**Requirements:** Minecraft 1.12.2, Java 8, Integrated Dynamics + CyclopsCore + CommonCapabilities,
-and the companion runtime mod **`integratedscriptingcallbacklibs`** (GraalVM JS). Without it the game
-starts but scripts report a missing JavaScript runtime. Install on **both** client and server.
+**Requirements:** Minecraft 1.12.2, Java 8, Integrated Dynamics + CyclopsCore + CommonCapabilities.
+The GraalVM JS runtime is **shaded into the release jar** (Gradle Shadow), so no companion runtime
+mod is needed; only the `-slim.jar` build requires `integratedscriptingcallbacklibs`. Install on
+**both** client and server.
 
 **Sandbox:** file I/O, processes, threads and native access are disabled by default; a statement
 limit (16384) guards against infinite loops. All serverside evaluation, no client-side scripting.
 
 Documentation for the port: [`docs/PORTING-1.12.2.md`](docs/PORTING-1.12.2.md); the editor design,
 keymap and performance notes are in [`docs/EDITOR.md`](docs/EDITOR.md). Licensed MIT;
-GraalVM is UPL 1.0 (`LICENSE-graal.txt`).
+GraalVM is UPL 1.0 (`LICENSE-graal.txt`), Translanguage is MIT
+(`META-INF/Translanguage-LICENSE`).

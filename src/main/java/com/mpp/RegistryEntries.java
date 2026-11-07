@@ -22,8 +22,16 @@ public final class RegistryEntries {
         return Item.getByNameOrId(Reference.MOD_ID + ":scripting_disk");
     }
 
+    public static Item itemRefresher() {
+        return Item.getByNameOrId(Reference.MOD_ID + ":refresher");
+    }
+
     public static Block blockScriptingDrive() {
         return Block.getBlockFromName(Reference.MOD_ID + ":scripting_drive");
+    }
+
+    public static Block blockAddressedMemory() {
+        return Block.getBlockFromName(Reference.MOD_ID + ":addressed_memory");
     }
 
     public static Block blockMendesite() {
